@@ -1,5 +1,6 @@
 """Async client for KCFinder file manager operations."""
 
+from pathlib import Path
 from types import TracebackType
 
 import httpx
@@ -8,6 +9,7 @@ from kcfinder_client._core import (
     build_action_url,
     build_form_data,
     build_headers,
+    check_action_error,
     parse_file_list,
 )
 from kcfinder_client.auth import BaseAuth
@@ -61,3 +63,44 @@ class AsyncKCFinderClient:
         data = build_form_data(dir=dir)
         response = await self._post("chDir", data)
         return parse_file_list(response.json())
+
+    async def upload(self, dir: str, files: Path | list[Path]) -> None:
+        """Upload one or more files to a directory."""
+        if isinstance(files, Path):
+            files = [files]
+        url = build_action_url(self._browse_url, "upload", self._file_type)
+        headers = build_headers(self._auth.get_referer())
+        upload_files = [("upload[]", (f.name, f.read_bytes())) for f in files]
+        response = await self._get_client().post(
+            url,
+            data={"dir": dir},
+            files=upload_files,
+            headers=headers,
+        )
+        text = response.text.strip()
+        if text:
+            check_action_error("upload", text)
+
+    async def delete(self, dir: str, file: str) -> None:
+        """Delete a file."""
+        data = build_form_data(dir=dir, file=file)
+        response = await self._post("delete", data)
+        check_action_error("delete", response.text)
+
+    async def rename(self, dir: str, file: str, new_name: str) -> None:
+        """Rename a file."""
+        data = build_form_data(dir=dir, file=file, new_name=new_name)
+        response = await self._post("rename", data)
+        check_action_error("rename", response.text)
+
+    async def download(self, dir: str, file: str) -> bytes:
+        """Download a file and return its content as bytes."""
+        data = build_form_data(dir=dir, file=file)
+        response = await self._post("download", data)
+        return response.content
+
+    async def get_thumbnail(self, dir: str, file: str) -> bytes:
+        """Get the thumbnail for a file as PNG bytes."""
+        data = build_form_data(dir=dir, file=file)
+        response = await self._post("thumb", data)
+        return response.content
