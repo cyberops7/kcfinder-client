@@ -5,13 +5,13 @@
 - [Why KCFinder Returns HTTP 200 for Errors](#why-kcfinder-returns-http-200-for-errors)
 - [Exception Hierarchy](#exception-hierarchy)
 - [Exception Reference](#exception-reference)
-  - [KCFinderError](#kcfindererror)
-  - [AuthError](#autherror)
-  - [ActionError](#actionerror)
-  - [FileOperationError](#fileoperationerror)
-  - [DirectoryOperationError](#directoryoperationerror)
-  - [PermissionDeniedError](#permissiondeniederror)
-  - [UploadError](#uploaderror)
+   - [KCFinderError](#kcfindererror)
+   - [AuthError](#autherror)
+   - [ActionError](#actionerror)
+   - [FileOperationError](#fileoperationerror)
+   - [DirectoryOperationError](#directoryoperationerror)
+   - [PermissionDeniedError](#permissiondeniederror)
+   - [UploadError](#uploaderror)
 - [Catching Patterns](#catching-patterns)
 
 ---
@@ -19,13 +19,16 @@
 ## Why KCFinder Returns HTTP 200 for Errors
 
 > [!IMPORTANT]
-> KCFinder always returns HTTP 200, even when an operation fails. Do not check the HTTP status code — this library inspects every response body and raises a Python exception when an error is detected.
+> KCFinder always returns HTTP 200, even when an operation fails. Do not
+> check the HTTP status code — this library inspects every response body and
+> raises a Python exception when an error is detected.
 
-Errors are communicated in the response body — either as a plain error string or as a JSON object like `{"error": "File not found"}`.
+Errors are communicated in the response body — either as a plain error string
+or as a JSON object like `{"error": "File not found"}`.
 
 ## Exception Hierarchy
 
-```
+```text
 KCFinderError
 ├── AuthError
 └── ActionError
@@ -53,7 +56,8 @@ from kcfinder_client import (
 
 ### KCFinderError
 
-Base class for all exceptions in this library. Catch this to handle any error from the library.
+Base class for all exceptions in this library. Catch this to handle any
+error from the library.
 
 ```python
 try:
@@ -64,7 +68,8 @@ except KCFinderError as e:
 
 ### AuthError
 
-Raised when authentication fails — either the login request returned a non-200 status, or the KCFinder session initialization failed.
+Raised when authentication fails — either the login request returned a
+non-200 status, or the KCFinder session initialization failed.
 
 ```python
 from kcfinder_client import AsyncKCFinderClient, HarmonySiteAuth, AuthError
@@ -79,20 +84,22 @@ except AuthError as e:
 ```
 
 Common causes:
+
 - Wrong username or password
 - Login URL or browse URL is incorrect
 - Server is unreachable
 
 ### ActionError
 
-Raised when a KCFinder action returns an error in the response body. This is the base class for all action-specific errors.
+Raised when a KCFinder action returns an error in the response body. This is
+the base class for all action-specific errors.
 
 #### Attributes
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `action` | `str` | The KCFinder action name (e.g., `"delete"`, `"upload"`) |
-| `message` | `str` | The error message from the server |
+| Attribute  | Type  | Description                                              |
+|------------|-------|----------------------------------------------------------|
+| `action`   | `str` | The KCFinder action name (e.g., `"delete"`, `"upload"`) |
+| `message`  | `str` | The error message from the server                        |
 
 ```python
 from kcfinder_client import ActionError
@@ -105,7 +112,8 @@ except ActionError as e:
 
 ### FileOperationError
 
-A subclass of `ActionError` raised for file-level failures: file not found, delete failed, rename conflict, etc.
+A subclass of `ActionError` raised for file-level failures: file not found,
+delete failed, rename conflict, etc.
 
 ```python
 from kcfinder_client import FileOperationError
@@ -118,7 +126,8 @@ except FileOperationError as e:
 
 ### DirectoryOperationError
 
-A subclass of `ActionError` raised for directory-level failures: directory not found, creation failed, rename conflict, etc.
+A subclass of `ActionError` raised for directory-level failures: directory
+not found, creation failed, rename conflict, etc.
 
 ```python
 from kcfinder_client import DirectoryOperationError
@@ -131,7 +140,8 @@ except DirectoryOperationError as e:
 
 ### PermissionDeniedError
 
-A subclass of `ActionError` raised when a write operation is attempted on a directory that KCFinder has marked as read-only.
+A subclass of `ActionError` raised when a write operation is attempted on a
+directory that KCFinder has marked as read-only.
 
 ```python
 from kcfinder_client import PermissionDeniedError
@@ -144,7 +154,8 @@ except PermissionDeniedError as e:
 
 ### UploadError
 
-A subclass of `ActionError` raised when one or more files fail to upload. The `message` attribute contains the server's error detail.
+A subclass of `ActionError` raised when one or more files fail to upload.
+The `message` attribute contains the server's error detail.
 
 ```python
 from kcfinder_client import UploadError
@@ -156,6 +167,7 @@ except UploadError as e:
 ```
 
 Common causes:
+
 - File type not allowed by KCFinder configuration
 - File size exceeds the server limit
 - Destination directory is not writable

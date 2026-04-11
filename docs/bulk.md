@@ -10,13 +10,17 @@
 
 ---
 
-Bulk operations act on multiple files at once. They are available on both `AsyncKCFinderClient` (async) and `KCFinderClient` (sync).
+Bulk operations act on multiple files at once. They are available on both
+`AsyncKCFinderClient` (async) and `KCFinderClient` (sync).
 
-Files in bulk operations are identified by their full relative path from the KCFinder root, including the directory. For example, a file named `banner.jpg` inside `images/banners/` is referenced as `"images/banners/banner.jpg"`.
+Files in bulk operations are identified by their full relative path from the
+KCFinder root, including the directory. For example, a file named `banner.jpg`
+inside `images/banners/` is referenced as `"images/banners/banner.jpg"`.
 
 ## copy
 
-Copy one or more files to a destination directory. The original files remain in place.
+Copy one or more files to a destination directory. The original files remain
+in place.
 
 ```python
 files = [
@@ -31,11 +35,13 @@ await client.copy(files, dest="images/archive/2024")
 client.copy(files, dest="images/archive/2024")
 ```
 
-After this call, both `images/banners/spring.jpg` and `images/archive/2024/spring.jpg` exist.
+After this call, both `images/banners/spring.jpg` and
+`images/archive/2024/spring.jpg` exist.
 
 ## move
 
-Move one or more files to a destination directory. The original files are removed.
+Move one or more files to a destination directory. The original files are
+removed.
 
 ```python
 files = [
@@ -70,7 +76,8 @@ await client.bulk_delete(files)
 client.bulk_delete(files)
 ```
 
-This is more efficient than calling `delete()` in a loop for large numbers of files. All files are deleted in one server round-trip.
+This is more efficient than calling `delete()` in a loop for large numbers of
+files. All files are deleted in one server round-trip.
 
 ## download_selected
 
@@ -94,7 +101,9 @@ with open("selected.zip", "wb") as f:
 ```
 
 > [!NOTE]
-> `download_selected` takes bare filenames (e.g., `"spring.jpg"`), not full relative paths. This is different from `copy`, `move`, and `bulk_delete`, which all use full paths from the KCFinder root.
+> `download_selected` takes bare filenames (e.g., `"spring.jpg"`), not full
+> relative paths. This is different from `copy`, `move`, and `bulk_delete`,
+> which all use full paths from the KCFinder root.
 
 ## Error Handling
 

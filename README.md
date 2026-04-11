@@ -4,9 +4,14 @@
 ![Python 3.14+](https://img.shields.io/badge/python-3.14+-blue.svg)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-A Python client library for [KCFinder](https://github.com/sunhater/kcfinder), a PHP web file manager. Wraps KCFinder's HTTP action-dispatch API into a clean Python interface with both async and sync clients.
+A Python client library for [KCFinder](https://github.com/sunhater/kcfinder),
+a PHP web file manager. Wraps KCFinder's HTTP action-dispatch API into a clean
+Python interface with both async and sync clients.
 
-**Compatibility:** Designed for and tested against HarmonySite's KCFinder fork. Should work with any standard KCFinder instance using `SessionAuth`.
+> [!NOTE]
+> Designed for and tested against HarmonySite's KCFinder fork.
+> May work with other KCFinder instances via `SessionAuth`, but this
+> has not been tested.
 
 ## Table of Contents
 
@@ -19,11 +24,11 @@ A Python client library for [KCFinder](https://github.com/sunhater/kcfinder), a 
 ## Install
 
 ```bash
-# pip
-pip install kcfinder-client
-
 # uv
 uv add kcfinder-client
+
+# pip
+pip install kcfinder-client
 ```
 
 ## Quick Start
@@ -129,8 +134,10 @@ with KCFinderClient(auth.get_referer(), auth) as client:
 ## Documentation
 
 - [Auth setup](docs/auth.md) — HarmonySiteAuth, SessionAuth, env vars
-- [File operations](docs/files.md) — list, upload, download, delete, rename, thumbnails
-- [Directory operations](docs/directories.md) — tree, expand, create, rename, delete
+- [File operations](docs/files.md) — list, upload, download, delete, rename,
+  thumbnails
+- [Directory operations](docs/directories.md) — tree, expand, create, rename,
+  delete
 - [Bulk operations](docs/bulk.md) — copy, move, bulk delete, download selected
 - [Sync manager](docs/sync.md) — push sync, dry run, SyncResult
 - [Exceptions](docs/exceptions.md) — error handling, exception hierarchy

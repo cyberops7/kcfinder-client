@@ -12,13 +12,18 @@
 
 ---
 
-All directory operations are available on both `AsyncKCFinderClient` (async) and `KCFinderClient` (sync). Async examples are shown first, with sync equivalents immediately after.
+All directory operations are available on both `AsyncKCFinderClient` (async)
+and `KCFinderClient` (sync). Async examples are shown first, with sync
+equivalents immediately after.
 
-Directory paths are relative to the configured `uploadDir`. For example, if `uploadDir` is `files/`, then `"images/banners"` refers to `files/images/banners/` on the server.
+Directory paths are relative to the configured `uploadDir`. For example, if
+`uploadDir` is `files/`, then `"images/banners"` refers to
+`files/images/banners/` on the server.
 
 ## get_tree
 
-Get the full directory tree starting from the KCFinder root. Returns a `DirTree` object.
+Get the full directory tree starting from the KCFinder root. Returns a
+`DirTree` object.
 
 ```python
 # Async
@@ -37,13 +42,13 @@ for child in tree.children:
 
 ### DirTree Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | `str` | Directory name |
-| `path` | `str` | Full server path |
-| `is_writable` | `bool` | Whether files can be written here |
-| `children` | `list[DirTree]` | Immediate subdirectories (recursive) |
-| `files` | `list[FileInfo]` | Files in this directory (may be empty for tree-only responses) |
+| Field         | Type              | Description                                                      |
+|---------------|-------------------|------------------------------------------------------------------|
+| `name`        | `str`             | Directory name                                                   |
+| `path`        | `str`             | Full server path                                                 |
+| `is_writable` | `bool`            | Whether files can be written here                                |
+| `children`    | `list[DirTree]`   | Immediate subdirectories (recursive)                             |
+| `files`       | `list[FileInfo]`  | Files in this directory (may be empty for tree-only responses)   |
 
 ### Traversing the Tree
 
@@ -60,7 +65,8 @@ print_tree(tree)
 
 ## expand
 
-Get the names of immediate subdirectories within a directory. Lighter than `get_tree()` when you only need one level.
+Get the names of immediate subdirectories within a directory. Lighter than
+`get_tree()` when you only need one level.
 
 ```python
 # Async
@@ -86,16 +92,18 @@ await client.create_dir("images", "new_gallery")
 client.create_dir("images", "new_gallery")
 ```
 
-| Parameter | Description |
-|-----------|-------------|
-| `dir` | The parent directory path |
-| `new_dir` | The name of the new subdirectory to create |
+| Parameter | Description                                  |
+|-----------|----------------------------------------------|
+| `dir`     | The parent directory path                    |
+| `new_dir` | The name of the new subdirectory to create   |
 
-Raises `DirectoryOperationError` if the directory already exists or the parent is not writable.
+Raises `DirectoryOperationError` if the directory already exists or the
+parent is not writable.
 
 ## rename_dir
 
-Rename a directory. The directory is identified by its current path; only its final component (the name) changes.
+Rename a directory. The directory is identified by its current path; only
+its final component (the name) changes.
 
 ```python
 # Async
@@ -105,10 +113,10 @@ await client.rename_dir("images/old_gallery", "new_gallery")
 client.rename_dir("images/old_gallery", "new_gallery")
 ```
 
-| Parameter | Description |
-|-----------|-------------|
-| `dir` | The current full path to the directory |
-| `new_name` | The new name (not a full path — just the final component) |
+| Parameter  | Description                                                |
+|------------|------------------------------------------------------------|
+| `dir`      | The current full path to the directory                     |
+| `new_name` | The new name (not a full path — just the final component)  |
 
 After this call, `images/old_gallery` becomes `images/new_gallery`.
 
@@ -117,7 +125,8 @@ After this call, `images/old_gallery` becomes `images/new_gallery`.
 Delete a directory and all of its contents recursively.
 
 > [!WARNING]
-> This operation is irreversible. All files and subdirectories within the target are permanently removed with no trash or undo mechanism.
+> This operation is irreversible. All files and subdirectories within the
+> target are permanently removed with no trash or undo mechanism.
 
 ```python
 # Async
@@ -127,7 +136,8 @@ await client.delete_dir("images/old_gallery")
 client.delete_dir("images/old_gallery")
 ```
 
-Raises `DirectoryOperationError` if the directory does not exist or is not writable.
+Raises `DirectoryOperationError` if the directory does not exist or is not
+writable.
 
 ## download_dir
 
@@ -144,7 +154,8 @@ with open("banners.zip", "wb") as f:
     f.write(zip_bytes)
 ```
 
-Returns the raw bytes of a ZIP file containing all files in the directory (and subdirectories, depending on the server configuration).
+Returns the raw bytes of a ZIP file containing all files in the directory
+(and subdirectories, depending on the server configuration).
 
 ## Error Handling
 

@@ -11,14 +11,17 @@
 
 ---
 
-The sync manager performs a one-way push sync: it makes a remote KCFinder directory match a local directory. Files that exist locally but not remotely are uploaded; files that exist remotely but not locally are deleted; files that match by name and size are skipped.
+The sync manager performs a one-way push sync: it makes a remote KCFinder
+directory match a local directory. Files that exist locally but not remotely
+are uploaded; files that exist remotely but not locally are deleted; files
+that match by name and size are skipped.
 
 Two classes are available:
 
-| Class | Use with |
-|-------|----------|
-| `SyncManager` | `AsyncKCFinderClient` (async) |
-| `SyncManagerSync` | `KCFinderClient` (sync) |
+| Class              | Use with                       |
+|--------------------|--------------------------------|
+| `SyncManager`      | `AsyncKCFinderClient` (async)  |
+| `SyncManagerSync`  | `KCFinderClient` (sync)        |
 
 ## Async Usage
 
@@ -63,7 +66,9 @@ with KCFinderClient(auth.get_referer(), auth) as client:
 
 ## Dry Run
 
-Pass `dry_run=True` to compute what would change without actually uploading or deleting anything. This is useful for previewing a sync before applying it.
+Pass `dry_run=True` to compute what would change without actually uploading
+or deleting anything. This is useful for previewing a sync before applying
+it.
 
 ```python
 # Async dry run
@@ -83,24 +88,31 @@ for name in result.skipped:
 
 ## SyncResult
 
-The `push()` method always returns a `SyncResult`, whether or not `dry_run` is set.
+The `push()` method always returns a `SyncResult`, whether or not `dry_run`
+is set.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `uploaded` | `list[str]` | Files uploaded (or that would be uploaded in dry run) |
-| `deleted` | `list[str]` | Files deleted (or that would be deleted in dry run) |
-| `skipped` | `list[str]` | Files with matching name and size — no action taken |
+| Field      | Type         | Description                                            |
+|------------|--------------|--------------------------------------------------------|
+| `uploaded` | `list[str]`  | Files uploaded (or that would be uploaded in dry run)  |
+| `deleted`  | `list[str]`  | Files deleted (or that would be deleted in dry run)    |
+| `skipped`  | `list[str]`  | Files with matching name and size — no action taken    |
 
 ## Comparison Strategy
 
-Files are compared by **name and size**. A file is considered up to date if a remote file with the same name has the same byte size as the local file. If the sizes differ, the local version is uploaded (overwriting the remote copy).
+Files are compared by **name and size**. A file is considered up to date if
+a remote file with the same name has the same byte size as the local file. If
+the sizes differ, the local version is uploaded (overwriting the remote copy).
 
 > [!NOTE]
-> Modification times are not compared. If a file's contents change without its size changing, the sync will not detect the difference. In practice this is rarely an issue for image uploads.
+> Modification times are not compared. If a file's contents change without
+> its size changing, the sync will not detect the difference. In practice
+> this is rarely an issue for image uploads.
 
 ## Subdirectories
 
-`SyncManager` operates on a single flat directory. It does not recurse into subdirectories. To sync a directory tree, call `push()` once per subdirectory:
+`SyncManager` operates on a single flat directory. It does not recurse into
+subdirectories. To sync a directory tree, call `push()` once per
+subdirectory:
 
 ```python
 base_local = Path("./images")

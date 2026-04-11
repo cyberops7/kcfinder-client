@@ -26,11 +26,25 @@ def tc(c):
 
 
 @task
+def mdlint(c):
+    """Run markdownlint on documentation."""
+    c.run(
+        "docker run --rm -i --platform linux/amd64 -v ./:/data"
+        " markdownlint/markdownlint -s .markdownlint.rb"
+        " README.md CLAUDE.md"
+        " docs/auth.md docs/bulk.md docs/directories.md"
+        " docs/exceptions.md docs/files.md docs/sync.md",
+        pty=True,
+    )
+
+
+@task
 def check(c):
-    """Run lint, format check, and typecheck."""
+    """Run lint, format check, typecheck, and markdown lint."""
     c.run("uv run ruff check src/ tests/", pty=True)
     c.run("uv run ruff format --check src/ tests/", pty=True)
     c.run("uv run pyrefly check src/", pty=True)
+    mdlint(c)
 
 
 @task
