@@ -10,10 +10,11 @@ from kcfinder_client._core import (
     build_form_data,
     build_headers,
     check_action_error,
+    parse_dir_tree,
     parse_file_list,
 )
 from kcfinder_client.auth import BaseAuth
-from kcfinder_client.models import FileInfo
+from kcfinder_client.models import DirTree, FileInfo
 
 
 class AsyncKCFinderClient:
@@ -103,4 +104,43 @@ class AsyncKCFinderClient:
         """Get the thumbnail for a file as PNG bytes."""
         data = build_form_data(dir=dir, file=file)
         response = await self._post("thumb", data)
+        return response.content
+
+    async def get_tree(self) -> DirTree:
+        """Get the full directory tree."""
+        url = build_action_url(self._browse_url, "init", self._file_type)
+        headers = build_headers(self._auth.get_referer())
+        response = await self._get_client().post(url, headers=headers)
+        return parse_dir_tree(response.json())
+
+    async def expand(self, dir: str) -> list[str]:
+        """Get subdirectory names within a directory."""
+        data = build_form_data(dir=dir)
+        response = await self._post("expand", data)
+        return response.json().get("dirs", [])
+
+    async def create_dir(self, dir: str, new_dir: str) -> None:
+        """Create a new subdirectory."""
+        data = build_form_data(dir=dir, new_dir=new_dir)
+        response = await self._post("newDir", data)
+        check_action_error("newDir", response.text)
+
+    async def rename_dir(self, dir: str, new_name: str) -> None:
+        """Rename a directory."""
+        data = build_form_data(dir=dir, new_name=new_name)
+        response = await self._post("renameDir", data)
+        body = response.json()
+        if "error" in body:
+            check_action_error("renameDir", body)
+
+    async def delete_dir(self, dir: str) -> None:
+        """Delete a directory recursively."""
+        data = build_form_data(dir=dir)
+        response = await self._post("deleteDir", data)
+        check_action_error("deleteDir", response.text)
+
+    async def download_dir(self, dir: str) -> bytes:
+        """Download a directory as a ZIP archive."""
+        data = build_form_data(dir=dir)
+        response = await self._post("downloadDir", data)
         return response.content

@@ -2,7 +2,7 @@ import pytest
 
 from kcfinder_client.async_client import AsyncKCFinderClient
 from kcfinder_client.exceptions import ActionError
-from kcfinder_client.models import FileInfo
+from kcfinder_client.models import DirTree, FileInfo
 from tests.conftest import BROWSE_URL
 
 
@@ -131,3 +131,91 @@ async def test_get_thumbnail(session_auth, httpx_mock):
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         thumb = await client.get_thumbnail("2026Program", "photo.jpg")
     assert thumb == b"png data"
+
+
+@pytest.mark.asyncio
+async def test_get_tree(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=init&type=images",
+        json={
+            "name": "images",
+            "path": "",
+            "writable": True,
+            "dirs": [
+                {
+                    "name": "2026Program",
+                    "path": "2026Program",
+                    "writable": True,
+                    "dirs": [],
+                },
+            ],
+            "files": [
+                {
+                    "name": "root.jpg",
+                    "size": 512,
+                    "mtime": 1704067200,
+                    "readable": True,
+                    "writable": True,
+                },
+            ],
+        },
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        tree = await client.get_tree()
+    assert isinstance(tree, DirTree)
+    assert tree.name == "images"
+    assert len(tree.children) == 1
+    assert tree.children[0].name == "2026Program"
+    assert len(tree.files) == 1
+
+
+@pytest.mark.asyncio
+async def test_expand(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=expand&type=images",
+        json={"dirs": ["sub1", "sub2"]},
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        subdirs = await client.expand("2026Program")
+    assert subdirs == ["sub1", "sub2"]
+
+
+@pytest.mark.asyncio
+async def test_create_dir(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=newDir&type=images",
+        text="true",
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        await client.create_dir("parent", "newdir")
+
+
+@pytest.mark.asyncio
+async def test_rename_dir(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=renameDir&type=images",
+        json={"name": "newname"},
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        await client.rename_dir("olddir", "newname")
+
+
+@pytest.mark.asyncio
+async def test_delete_dir(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=deleteDir&type=images",
+        text="true",
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        await client.delete_dir("olddir")
+
+
+@pytest.mark.asyncio
+async def test_download_dir(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=downloadDir&type=images",
+        content=b"zip data",
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        zip_bytes = await client.download_dir("2026Program")
+    assert zip_bytes == b"zip data"
