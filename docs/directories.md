@@ -86,9 +86,10 @@ await client.create_dir("images", "new_gallery")
 client.create_dir("images", "new_gallery")
 ```
 
-Parameters:
-- `dir` — the parent directory path
-- `new_dir` — the name of the new subdirectory to create
+| Parameter | Description |
+|-----------|-------------|
+| `dir` | The parent directory path |
+| `new_dir` | The name of the new subdirectory to create |
 
 Raises `DirectoryOperationError` if the directory already exists or the parent is not writable.
 
@@ -104,15 +105,19 @@ await client.rename_dir("images/old_gallery", "new_gallery")
 client.rename_dir("images/old_gallery", "new_gallery")
 ```
 
-Parameters:
-- `dir` — the current full path to the directory
-- `new_name` — the new name (not a full path, just the final component)
+| Parameter | Description |
+|-----------|-------------|
+| `dir` | The current full path to the directory |
+| `new_name` | The new name (not a full path — just the final component) |
 
 After this call, `images/old_gallery` becomes `images/new_gallery`.
 
 ## delete_dir
 
 Delete a directory and all of its contents recursively.
+
+> [!WARNING]
+> This operation is irreversible. All files and subdirectories within the target are permanently removed with no trash or undo mechanism.
 
 ```python
 # Async
@@ -122,7 +127,7 @@ await client.delete_dir("images/old_gallery")
 client.delete_dir("images/old_gallery")
 ```
 
-This operation is irreversible. Raises `DirectoryOperationError` if the directory does not exist or is not writable.
+Raises `DirectoryOperationError` if the directory does not exist or is not writable.
 
 ## download_dir
 
@@ -154,4 +159,6 @@ except DirectoryOperationError as e:
     print(f"Directory operation failed ({e.action}): {e.message}")
 ```
 
-See [exceptions.md](exceptions.md) for the full error hierarchy.
+---
+
+See also: [File Operations](files.md), [Exceptions](exceptions.md)

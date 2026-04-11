@@ -93,7 +93,8 @@ with open("selected.zip", "wb") as f:
     f.write(zip_bytes)
 ```
 
-Note that `download_selected` takes a `dir` and a list of bare filenames (not full paths), unlike `copy`, `move`, and `bulk_delete` which use full relative paths.
+> [!NOTE]
+> `download_selected` takes bare filenames (e.g., `"spring.jpg"`), not full relative paths. This is different from `copy`, `move`, and `bulk_delete`, which all use full paths from the KCFinder root.
 
 ## Error Handling
 
@@ -108,4 +109,6 @@ except ActionError as e:
     print(f"Bulk action failed ({e.action}): {e.message}")
 ```
 
-See [exceptions.md](exceptions.md) for the full error hierarchy.
+---
+
+See also: [File Operations](files.md), [Directory Operations](directories.md)

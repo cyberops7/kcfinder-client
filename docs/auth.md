@@ -49,7 +49,8 @@ auth = HarmonySiteAuth(
 | `bros_config` | `dict` | Yes | KCFinder configuration dictionary (see below) |
 | `brosseccheck` | `str` | No | Security token; default is `"Xx-ok-xX"` |
 
-#### bros_config
+<details>
+<summary><strong>bros_config reference</strong></summary>
 
 The `bros_config` dict is deserialized by HarmonySite's KCFinder fork to configure the file manager session. At minimum it should contain:
 
@@ -68,6 +69,8 @@ The `bros_config` dict is deserialized by HarmonySite's KCFinder fork to configu
 | `uploadURL` | Public URL prefix for uploaded files |
 
 The dict is JSON-encoded and passed as a query parameter on the initial `browse.php` GET request.
+
+</details>
 
 ### SessionAuth
 
@@ -91,6 +94,9 @@ auth = SessionAuth(
 
 Use `harmonysite_auth_from_env()` to load HarmonySiteAuth configuration from environment variables. This keeps credentials out of source code.
 
+> [!TIP]
+> Never hardcode credentials in source files. Load them from environment variables or a secret manager, and use `harmonysite_auth_from_env()` for the simplest integration.
+
 ```python
 from kcfinder_client import harmonysite_auth_from_env
 
@@ -113,7 +119,8 @@ auth = harmonysite_auth_from_env()
 |----------|---------|-------------|
 | `KCFINDER_BROSSECCHECK` | `"Xx-ok-xX"` | Security check token |
 
-### Example .env file
+<details>
+<summary><strong>Example .env file</strong></summary>
 
 ```bash
 KCFINDER_LOGIN_URL=https://example.harmonysong.com/dbaction.php
@@ -122,6 +129,8 @@ KCFINDER_USERNAME=admin
 KCFINDER_PASSWORD=secret
 KCFINDER_BROS_CONFIG={"uploadDir":"files/","thumbsDir":"files/.thumbs/","uploadURL":"https://example.harmonysong.com/files/"}
 ```
+
+</details>
 
 ## Custom Auth
 
@@ -144,3 +153,7 @@ class MyCustomAuth(BaseAuth):
         # Return the URL to use as the Referer header
         return "https://example.com/kcfinder/browse.php"
 ```
+
+---
+
+See also: [File Operations](files.md) for getting started after auth

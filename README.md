@@ -1,5 +1,9 @@
 # kcfinder-client
 
+[![CI](https://github.com/cyberops7/kcfinder-client/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberops7/kcfinder-client/actions/workflows/ci.yml)
+![Python 3.14+](https://img.shields.io/badge/python-3.14+-blue.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 A Python client library for [KCFinder](https://github.com/sunhater/kcfinder), a PHP web file manager. Wraps KCFinder's HTTP action-dispatch API into a clean Python interface with both async and sync clients.
 
 **Compatibility:** Designed for and tested against HarmonySite's KCFinder fork. Should work with any standard KCFinder instance using `SessionAuth`.

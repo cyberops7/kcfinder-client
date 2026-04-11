@@ -47,6 +47,9 @@ for f in files:
 
 Upload one file or a list of files to a directory.
 
+> [!TIP]
+> `upload` accepts either a single `Path` or a list of `Path` objects. Use a list to upload multiple files in one request rather than calling `upload` in a loop.
+
 ```python
 from pathlib import Path
 
@@ -111,10 +114,11 @@ await client.rename("images/banners", "banner_v1.jpg", "banner_v2.jpg")
 client.rename("images/banners", "banner_v1.jpg", "banner_v2.jpg")
 ```
 
-Parameters:
-- `dir` — the directory containing the file
-- `file` — current filename
-- `new_name` — new filename (no path)
+| Parameter | Description |
+|-----------|-------------|
+| `dir` | The directory containing the file |
+| `file` | Current filename |
+| `new_name` | New filename (no path component) |
 
 ## get_thumbnail
 
@@ -147,4 +151,6 @@ except FileOperationError as e:
     print(f"File operation failed ({e.action}): {e.message}")
 ```
 
-See [exceptions.md](exceptions.md) for the full error hierarchy.
+---
+
+See also: [Bulk Operations](bulk.md) for multi-file actions, [Exceptions](exceptions.md) for error handling

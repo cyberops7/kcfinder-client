@@ -95,7 +95,8 @@ The `push()` method always returns a `SyncResult`, whether or not `dry_run` is s
 
 Files are compared by **name and size**. A file is considered up to date if a remote file with the same name has the same byte size as the local file. If the sizes differ, the local version is uploaded (overwriting the remote copy).
 
-Modification times are not compared. If you update a file's contents without changing its size, the sync will not detect the change. In practice this is rarely an issue for image uploads.
+> [!NOTE]
+> Modification times are not compared. If a file's contents change without its size changing, the sync will not detect the difference. In practice this is rarely an issue for image uploads.
 
 ## Subdirectories
 
@@ -111,3 +112,7 @@ for d in dirs:
     result = await sync.push(f"{base_remote}/{d}", base_local / d)
     print(f"{d}: +{len(result.uploaded)} -{len(result.deleted)} ={len(result.skipped)}")
 ```
+
+---
+
+See also: [File Operations](files.md), [Exceptions](exceptions.md)
