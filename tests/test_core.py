@@ -7,9 +7,11 @@ from kcfinder_client._core import (
     build_form_data,
     build_headers,
     check_action_error,
+    parse_dir_tree,
     parse_file_list,
 )
 from kcfinder_client.exceptions import ActionError
+from kcfinder_client.models import DirTree
 
 
 def test_build_action_url():
@@ -100,3 +102,37 @@ def test_check_action_error_with_error_string():
 def test_check_action_error_with_json_error():
     with pytest.raises(ActionError, match="not found"):
         check_action_error("rename", {"error": "not found"})
+
+
+def test_parse_dir_tree():
+    raw = {
+        "name": "images",
+        "path": "",
+        "writable": True,
+        "dirs": [
+            {
+                "name": "2026Program",
+                "path": "2026Program",
+                "writable": True,
+                "dirs": [],
+            },
+        ],
+        "files": [
+            {
+                "name": "root.jpg",
+                "size": 512,
+                "mtime": 1704067200,
+                "readable": True,
+                "writable": True,
+            },
+        ],
+    }
+    tree = parse_dir_tree(raw)
+    assert isinstance(tree, DirTree)
+    assert tree.name == "images"
+    assert tree.is_writable is True
+    assert len(tree.children) == 1
+    assert tree.children[0].name == "2026Program"
+    assert tree.children[0].path == "2026Program"
+    assert len(tree.files) == 1
+    assert tree.files[0].name == "root.jpg"
