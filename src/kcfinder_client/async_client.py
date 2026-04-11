@@ -144,3 +144,33 @@ class AsyncKCFinderClient:
         data = build_form_data(dir=dir)
         response = await self._post("downloadDir", data)
         return response.content
+
+    async def _bulk_action(
+        self, action: str, files: list[str], dest: str | None = None
+    ) -> None:
+        """Shared logic for bulk copy/move/delete actions."""
+        data = build_form_data(files=files)
+        if dest is not None:
+            data["dir"] = dest
+        response = await self._post(action, data)
+        body = response.text.strip()
+        if body.lower() != "true":
+            check_action_error(action, response.json())
+
+    async def copy(self, files: list[str], dest: str) -> None:
+        """Copy files to a destination directory."""
+        await self._bulk_action("cp_cbd", files, dest)
+
+    async def move(self, files: list[str], dest: str) -> None:
+        """Move files to a destination directory."""
+        await self._bulk_action("mv_cbd", files, dest)
+
+    async def bulk_delete(self, files: list[str]) -> None:
+        """Delete multiple files."""
+        await self._bulk_action("rm_cbd", files)
+
+    async def download_selected(self, dir: str, files: list[str]) -> bytes:
+        """Download selected files as a ZIP archive."""
+        data = build_form_data(dir=dir, files=files)
+        response = await self._post("downloadSelected", data)
+        return response.content

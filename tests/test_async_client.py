@@ -219,3 +219,55 @@ async def test_download_dir(session_auth, httpx_mock):
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         zip_bytes = await client.download_dir("2026Program")
     assert zip_bytes == b"zip data"
+
+
+@pytest.mark.asyncio
+async def test_copy(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=cp_cbd&type=images",
+        text="true",
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        await client.copy(["dir/a.jpg", "dir/b.jpg"], dest="archive")
+
+
+@pytest.mark.asyncio
+async def test_move(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=mv_cbd&type=images",
+        text="true",
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        await client.move(["dir/a.jpg", "dir/b.jpg"], dest="archive")
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=rm_cbd&type=images",
+        text="true",
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        await client.bulk_delete(["dir/a.jpg", "dir/b.jpg"])
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_error(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=rm_cbd&type=images",
+        json={"error": "Permission denied"},
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        with pytest.raises(ActionError, match="Permission denied"):
+            await client.bulk_delete(["dir/protected.jpg"])
+
+
+@pytest.mark.asyncio
+async def test_download_selected(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=downloadSelected&type=images",
+        content=b"zip data",
+    )
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        zip_bytes = await client.download_selected("2026Program", ["a.jpg", "b.jpg"])
+    assert zip_bytes == b"zip data"
