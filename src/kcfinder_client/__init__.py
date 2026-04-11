@@ -1,0 +1,1 @@
+"""Python client library for KCFinder file manager."""

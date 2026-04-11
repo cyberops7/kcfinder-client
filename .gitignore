@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+dist/
+*.egg-info/
+.venv/
+.pyrefly/
+.ruff_cache/
+*.whl
+*.tar.gz
+.pytest_cache/
+.coverage
+htmlcov/
+docs/superpowers/
