@@ -1,4 +1,5 @@
 import json
+import os
 from abc import ABC, abstractmethod
 from urllib.parse import urlencode
 
@@ -106,3 +107,26 @@ class HarmonySiteAuth(BaseAuth):
             }
         )
         return f"{self._browse_url}?{params}"
+
+
+def harmonysite_auth_from_env() -> HarmonySiteAuth:
+    """Build a HarmonySiteAuth from environment variables.
+
+    Required env vars:
+        KCFINDER_LOGIN_URL: The HarmonySite login URL
+        KCFINDER_BROWSE_URL: The KCFinder browse.php URL
+        KCFINDER_USERNAME: Login username
+        KCFINDER_PASSWORD: Login password
+        KCFINDER_BROS_CONFIG: JSON string of the bros_config dict
+
+    Optional env vars:
+        KCFINDER_BROSSECCHECK: Security check token (default: "Xx-ok-xX")
+    """
+    return HarmonySiteAuth(
+        login_url=os.environ["KCFINDER_LOGIN_URL"],
+        browse_url=os.environ["KCFINDER_BROWSE_URL"],
+        username=os.environ["KCFINDER_USERNAME"],
+        password=os.environ["KCFINDER_PASSWORD"],
+        bros_config=json.loads(os.environ["KCFINDER_BROS_CONFIG"]),
+        brosseccheck=os.environ.get("KCFINDER_BROSSECCHECK", "Xx-ok-xX"),
+    )

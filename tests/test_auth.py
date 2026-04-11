@@ -1,7 +1,15 @@
+import os
+from unittest.mock import patch
+
 import httpx
 import pytest
 
-from kcfinder_client.auth import BaseAuth, HarmonySiteAuth, SessionAuth
+from kcfinder_client.auth import (
+    BaseAuth,
+    HarmonySiteAuth,
+    SessionAuth,
+    harmonysite_auth_from_env,
+)
 from kcfinder_client.exceptions import AuthError
 
 
@@ -108,3 +116,40 @@ async def test_harmonysite_auth_success(httpx_mock):
     async with httpx.AsyncClient() as client:
         await auth.authenticate(client)
     # If we get here without AuthError, auth succeeded
+
+
+def test_harmonysite_auth_from_env():
+    env = {
+        "KCFINDER_LOGIN_URL": "https://example.com/dbaction.php",
+        "KCFINDER_BROWSE_URL": "https://example.com/kcfinder/browse.php",
+        "KCFINDER_USERNAME": "testuser",
+        "KCFINDER_PASSWORD": "testpass",
+        "KCFINDER_BROS_CONFIG": (
+            '{"disabled": false, "uploadDir": "/home/user/public_html"}'
+        ),
+        "KCFINDER_BROSSECCHECK": "Xx-ok-xX",
+    }
+    with patch.dict(os.environ, env, clear=False):
+        auth = harmonysite_auth_from_env()
+    assert isinstance(auth, HarmonySiteAuth)
+    assert "browse.php" in auth.get_referer()
+
+
+def test_harmonysite_auth_from_env_missing_var():
+    with patch.dict(os.environ, {}, clear=True):
+        with pytest.raises(KeyError):
+            harmonysite_auth_from_env()
+
+
+def test_harmonysite_auth_from_env_default_brosseccheck():
+    env = {
+        "KCFINDER_LOGIN_URL": "https://example.com/dbaction.php",
+        "KCFINDER_BROWSE_URL": "https://example.com/kcfinder/browse.php",
+        "KCFINDER_USERNAME": "testuser",
+        "KCFINDER_PASSWORD": "testpass",
+        "KCFINDER_BROS_CONFIG": '{"disabled": false}',
+    }
+    with patch.dict(os.environ, env, clear=False):
+        auth = harmonysite_auth_from_env()
+    assert isinstance(auth, HarmonySiteAuth)
+    assert "brosseccheck" in auth.get_referer()
