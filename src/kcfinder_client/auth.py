@@ -1,4 +1,3 @@
-import json
 import os
 from abc import ABC, abstractmethod
 from urllib.parse import urlencode
@@ -58,7 +57,7 @@ class HarmonySiteAuth(BaseAuth):
         browse_url: str,
         username: str,
         password: str,
-        bros_config: dict,
+        bros_config: str,
         brosseccheck: str = "Xx-ok-xX",
     ) -> None:
         self._login_url = login_url
@@ -68,32 +67,52 @@ class HarmonySiteAuth(BaseAuth):
         self._bros_config = bros_config
         self._brosseccheck = brosseccheck
 
+    def _login_data(self) -> dict[str, str]:
+        """Build the HarmonySite login form payload."""
+        return {
+            "dbase": "users",
+            "action": "login",
+            "username": self._username,
+            "password": self._password,
+            "nextpage": self._login_url.rsplit("/", 1)[0],
+            "login": "Log In",
+            "remember": "1",
+        }
+
     async def authenticate(self, session: httpx.AsyncClient) -> None:
         login_resp = await session.post(
             self._login_url,
-            data={"username": self._username, "password": self._password},
+            data=self._login_data(),
+            follow_redirects=True,
         )
         if login_resp.status_code != 200:
-            raise AuthError(f"Login failed with status {login_resp.status_code}")
+            raise AuthError(
+                f"Login failed with status {login_resp.status_code}"
+            )
 
         init_resp = await session.get(self._init_url())
         if init_resp.status_code != 200:
             raise AuthError(
-                f"KCFinder session init failed with status {init_resp.status_code}"
+                "KCFinder session init failed with status "
+                f"{init_resp.status_code}"
             )
 
     def authenticate_sync(self, session: httpx.Client) -> None:
         login_resp = session.post(
             self._login_url,
-            data={"username": self._username, "password": self._password},
+            data=self._login_data(),
+            follow_redirects=True,
         )
         if login_resp.status_code != 200:
-            raise AuthError(f"Login failed with status {login_resp.status_code}")
+            raise AuthError(
+                f"Login failed with status {login_resp.status_code}"
+            )
 
         init_resp = session.get(self._init_url())
         if init_resp.status_code != 200:
             raise AuthError(
-                f"KCFinder session init failed with status {init_resp.status_code}"
+                "KCFinder session init failed with status "
+                f"{init_resp.status_code}"
             )
 
     def get_referer(self) -> str:
@@ -102,7 +121,7 @@ class HarmonySiteAuth(BaseAuth):
     def _init_url(self) -> str:
         params = urlencode(
             {
-                "bros_config": json.dumps(self._bros_config),
+                "bros_config": self._bros_config,
                 "brosseccheck": self._brosseccheck,
             }
         )
@@ -117,7 +136,7 @@ def harmonysite_auth_from_env() -> HarmonySiteAuth:
         KCFINDER_BROWSE_URL: The KCFinder browse.php URL
         KCFINDER_USERNAME: Login username
         KCFINDER_PASSWORD: Login password
-        KCFINDER_BROS_CONFIG: JSON string of the bros_config dict
+        KCFINDER_BROS_CONFIG: PHP-serialized bros_config string
 
     Optional env vars:
         KCFINDER_BROSSECCHECK: Security check token (default: "Xx-ok-xX")
@@ -127,6 +146,6 @@ def harmonysite_auth_from_env() -> HarmonySiteAuth:
         browse_url=os.environ["KCFINDER_BROWSE_URL"],
         username=os.environ["KCFINDER_USERNAME"],
         password=os.environ["KCFINDER_PASSWORD"],
-        bros_config=json.loads(os.environ["KCFINDER_BROS_CONFIG"]),
+        bros_config=os.environ["KCFINDER_BROS_CONFIG"],
         brosseccheck=os.environ.get("KCFINDER_BROSSECCHECK", "Xx-ok-xX"),
     )

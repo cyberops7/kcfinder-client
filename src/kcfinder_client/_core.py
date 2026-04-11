@@ -61,14 +61,44 @@ def parse_file_list(raw: dict) -> list[FileInfo]:
 
 
 def parse_dir_tree(raw: dict) -> DirTree:
-    """Parse the response from an init action into a DirTree."""
+    """Parse a KCFinder init response into a DirTree.
+
+    The init response wraps the tree in a "tree" key at the top level.
+    Files are siblings of "tree", not nested under it.
+    """
+    tree = raw.get("tree", raw)
+    files = parse_file_list(raw) if "files" in raw else []
+    return _parse_tree_node(tree, files)
+
+
+def _parse_tree_node(
+    node: dict, files: list[FileInfo] | None = None
+) -> DirTree:
+    """Parse a single tree node recursively."""
     return DirTree(
-        name=raw["name"],
-        path=raw["path"],
-        is_writable=raw.get("writable", False),
-        children=[parse_dir_tree(child) for child in raw.get("dirs", [])],
-        files=parse_file_list(raw) if "files" in raw else [],
+        name=node["name"],
+        is_writable=node.get("writable", False),
+        has_subdirs=node.get("hasDirs", False),
+        children=[
+            _parse_tree_node(child) for child in node.get("dirs", [])
+        ],
+        files=files if files is not None else [],
     )
+
+
+def check_upload_response(response_text: str) -> None:
+    """Check an upload response for errors.
+
+    Upload responses differ from other actions: success returns the
+    uploaded filename prefixed with "/" (e.g., "/photo.jpg"). Errors
+    return "filename: error message". Multiple files produce one line
+    per file.
+    """
+    for line in response_text.strip().splitlines():
+        line = line.strip()
+        if not line or line.startswith("/"):
+            continue  # success — uploaded filename
+        raise ActionError(action="upload", message=line)
 
 
 def check_action_error(action: str, response_body: str | dict) -> None:
@@ -78,9 +108,26 @@ def check_action_error(action: str, response_body: str | dict) -> None:
     string "true" for mutating actions, or valid JSON for query actions.
     Errors are returned as plain strings or as {"error": "message"} dicts.
     """
+    if isinstance(response_body, dict):
+        if "error" in response_body:
+            raise ActionError(
+                action=action, message=response_body["error"]
+            )
+        return  # empty dict or success dict without "error" key
     if isinstance(response_body, str):
-        if response_body.strip().lower() == "true":
+        stripped = response_body.strip()
+        if stripped.lower() == "true" or stripped == "" or stripped == "{}":
             return
-        raise ActionError(action=action, message=response_body.strip())
-    if isinstance(response_body, dict) and "error" in response_body:
-        raise ActionError(action=action, message=response_body["error"])
+        # Try to parse as JSON — some actions return JSON error strings
+        try:
+            import json
+
+            parsed = json.loads(stripped)
+            if isinstance(parsed, dict) and "error" in parsed:
+                raise ActionError(
+                    action=action, message=parsed["error"]
+                )
+            return  # valid JSON without "error" key
+        except (json.JSONDecodeError, TypeError):
+            pass
+        raise ActionError(action=action, message=stripped)

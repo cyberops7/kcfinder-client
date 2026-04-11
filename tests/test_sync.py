@@ -12,7 +12,7 @@ async def test_push_uploads_new_files(session_auth, httpx_mock, tmp_path):
         url=f"{BROWSE_URL}?act=chDir&type=images",
         json={"files": [], "writable": True},
     )
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images", text="")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images&dir=remote_dir", text="")
 
     local_dir = tmp_path / "images"
     local_dir.mkdir()
@@ -111,7 +111,7 @@ async def test_push_uploads_size_mismatch(session_auth, httpx_mock, tmp_path):
             "writable": True,
         },
     )
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images", text="")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images&dir=remote_dir", text="")
 
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         manager = SyncManager(client)
@@ -159,7 +159,7 @@ def test_push_sync_uploads_new_files(session_auth, httpx_mock, tmp_path):
         url=f"{BROWSE_URL}?act=chDir&type=images",
         json={"files": [], "writable": True},
     )
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images", text="")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images&dir=remote_dir", text="")
 
     local_dir = tmp_path / "images"
     local_dir.mkdir()

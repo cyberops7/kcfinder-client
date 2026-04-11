@@ -17,8 +17,8 @@ class DirTree:
     """A directory tree node from KCFinder's init or expand actions."""
 
     name: str
-    path: str
     is_writable: bool
+    has_subdirs: bool
     children: list[DirTree]
     files: list[FileInfo]
 

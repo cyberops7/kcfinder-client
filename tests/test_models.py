@@ -18,22 +18,31 @@ def test_file_info_construction():
 
 def test_dir_tree_construction():
     child = DirTree(
-        name="sub", path="root/sub", is_writable=True, children=[], files=[]
+        name="sub",
+        is_writable=True,
+        has_subdirs=False,
+        children=[],
+        files=[],
     )
     tree = DirTree(
         name="root",
-        path="root",
         is_writable=True,
+        has_subdirs=True,
         children=[child],
         files=[
             FileInfo(
-                name="a.jpg", size=100, mtime=datetime(2026, 1, 1), is_writable=True
+                name="a.jpg",
+                size=100,
+                mtime=datetime(2026, 1, 1),
+                is_writable=True,
             ),
         ],
     )
     assert tree.name == "root"
+    assert tree.has_subdirs is True
     assert len(tree.children) == 1
     assert tree.children[0].name == "sub"
+    assert tree.children[0].has_subdirs is False
     assert len(tree.files) == 1
 
 

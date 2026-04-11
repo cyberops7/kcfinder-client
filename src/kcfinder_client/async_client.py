@@ -10,6 +10,7 @@ from kcfinder_client._core import (
     build_form_data,
     build_headers,
     check_action_error,
+    check_upload_response,
     parse_dir_tree,
     parse_file_list,
 )
@@ -69,18 +70,22 @@ class AsyncKCFinderClient:
         """Upload one or more files to a directory."""
         if isinstance(files, Path):
             files = [files]
-        url = build_action_url(self._browse_url, "upload", self._file_type)
+        url = build_action_url(
+            self._browse_url, "upload", self._file_type
+        )
+        # dir is sent as a query param because httpx doesn't merge
+        # form data fields into multipart uploads the way requests does
+        url += f"&dir={dir}"
         headers = build_headers(self._auth.get_referer())
-        upload_files = [("upload[]", (f.name, f.read_bytes())) for f in files]
+        upload_files = [
+            ("upload[]", (f.name, f.read_bytes())) for f in files
+        ]
         response = await self._get_client().post(
             url,
-            data={"dir": dir},
             files=upload_files,
             headers=headers,
         )
-        text = response.text.strip()
-        if text:
-            check_action_error("upload", text)
+        check_upload_response(response.text)
 
     async def delete(self, dir: str, file: str) -> None:
         """Delete a file."""

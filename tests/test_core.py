@@ -31,18 +31,18 @@ def test_build_headers():
 
 
 def test_build_form_data_with_dir():
-    data = build_form_data(dir="2026Program")
-    assert data == {"dir": "2026Program"}
+    data = build_form_data(dir="test_dir")
+    assert data == {"dir": "test_dir"}
 
 
 def test_build_form_data_with_dir_and_file():
-    data = build_form_data(dir="2026Program", file="photo.jpg")
-    assert data == {"dir": "2026Program", "file": "photo.jpg"}
+    data = build_form_data(dir="test_dir", file="photo.jpg")
+    assert data == {"dir": "test_dir", "file": "photo.jpg"}
 
 
 def test_build_form_data_with_new_name():
-    data = build_form_data(dir="2026Program", file="old.jpg", new_name="new.jpg")
-    assert data == {"dir": "2026Program", "file": "old.jpg", "newName": "new.jpg"}
+    data = build_form_data(dir="test_dir", file="old.jpg", new_name="new.jpg")
+    assert data == {"dir": "test_dir", "file": "old.jpg", "newName": "new.jpg"}
 
 
 def test_build_form_data_with_new_dir():
@@ -106,17 +106,23 @@ def test_check_action_error_with_json_error():
 
 def test_parse_dir_tree():
     raw = {
-        "name": "images",
-        "path": "",
-        "writable": True,
-        "dirs": [
-            {
-                "name": "2026Program",
-                "path": "2026Program",
-                "writable": True,
-                "dirs": [],
-            },
-        ],
+        "tree": {
+            "name": "images",
+            "readable": True,
+            "writable": True,
+            "removable": False,
+            "hasDirs": True,
+            "current": True,
+            "dirs": [
+                {
+                    "name": "test_dir",
+                    "readable": True,
+                    "writable": True,
+                    "removable": True,
+                    "hasDirs": False,
+                },
+            ],
+        },
         "files": [
             {
                 "name": "root.jpg",
@@ -131,8 +137,9 @@ def test_parse_dir_tree():
     assert isinstance(tree, DirTree)
     assert tree.name == "images"
     assert tree.is_writable is True
+    assert tree.has_subdirs is True
     assert len(tree.children) == 1
-    assert tree.children[0].name == "2026Program"
-    assert tree.children[0].path == "2026Program"
+    assert tree.children[0].name == "test_dir"
+    assert tree.children[0].has_subdirs is False
     assert len(tree.files) == 1
     assert tree.files[0].name == "root.jpg"

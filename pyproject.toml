@@ -39,5 +39,6 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-httpx",
+    "python-dotenv>=1.2.2",
     "ruff",
 ]

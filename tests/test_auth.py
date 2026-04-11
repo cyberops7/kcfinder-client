@@ -45,14 +45,12 @@ async def test_session_auth_sets_cookie_async():
     await client.aclose()
 
 
-BROS_CONFIG = {
-    "disabled": False,
-    "uploadURL": "",
-    "uploadDir": "/home/user/public_html",
-    "thumbsDir": "/images/.thumbs",
-    "denyUpdateCheck": True,
-    "denyExtensionRename": True,
-}
+BROS_CONFIG = (
+    'a:6:{s:8:"disabled";b:0;s:9:"uploadURL";s:0:"";'
+    's:9:"uploadDir";s:27:"/home/user/public_html";'
+    's:9:"thumbsDir";s:15:"/images/.thumbs";'
+    's:15:"denyUpdateCheck";b:1;s:19:"denyExtensionRename";b:1;}'
+)
 
 
 def test_harmonysite_auth_is_base_auth_subclass():
@@ -124,9 +122,7 @@ def test_harmonysite_auth_from_env():
         "KCFINDER_BROWSE_URL": "https://example.com/kcfinder/browse.php",
         "KCFINDER_USERNAME": "testuser",
         "KCFINDER_PASSWORD": "testpass",
-        "KCFINDER_BROS_CONFIG": (
-            '{"disabled": false, "uploadDir": "/home/user/public_html"}'
-        ),
+        "KCFINDER_BROS_CONFIG": 'a:1:{s:9:"uploadDir";s:27:"/home/user/public_html";}',
         "KCFINDER_BROSSECCHECK": "Xx-ok-xX",
     }
     with patch.dict(os.environ, env, clear=False):
@@ -147,7 +143,7 @@ def test_harmonysite_auth_from_env_default_brosseccheck():
         "KCFINDER_BROWSE_URL": "https://example.com/kcfinder/browse.php",
         "KCFINDER_USERNAME": "testuser",
         "KCFINDER_PASSWORD": "testpass",
-        "KCFINDER_BROS_CONFIG": '{"disabled": false}',
+        "KCFINDER_BROS_CONFIG": 'a:1:{s:8:"disabled";b:0;}',
     }
     with patch.dict(os.environ, env, clear=False):
         auth = harmonysite_auth_from_env()
