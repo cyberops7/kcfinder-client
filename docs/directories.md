@@ -1,5 +1,17 @@
 # Directory Operations
 
+## Table of Contents
+
+- [get_tree](#get_tree)
+- [expand](#expand)
+- [create_dir](#create_dir)
+- [rename_dir](#rename_dir)
+- [delete_dir](#delete_dir)
+- [download_dir](#download_dir)
+- [Error Handling](#error-handling)
+
+---
+
 All directory operations are available on both `AsyncKCFinderClient` (async) and `KCFinderClient` (sync). Async examples are shown first, with sync equivalents immediately after.
 
 Directory paths are relative to the configured `uploadDir`. For example, if `uploadDir` is `files/`, then `"images/banners"` refers to `files/images/banners/` on the server.

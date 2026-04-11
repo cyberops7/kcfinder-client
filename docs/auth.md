@@ -1,5 +1,15 @@
 # Auth
 
+## Table of Contents
+
+- [Strategies](#strategies)
+  - [HarmonySiteAuth](#harmonysiteauth)
+  - [SessionAuth](#sessionauth)
+- [Environment Variables](#environment-variables)
+- [Custom Auth](#custom-auth)
+
+---
+
 kcfinder-client uses a pluggable auth strategy pattern. You pick the right strategy for your KCFinder installation, configure it once, and pass it to the client.
 
 ## Strategies

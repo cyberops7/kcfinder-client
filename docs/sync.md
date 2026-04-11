@@ -1,5 +1,16 @@
 # Sync Manager
 
+## Table of Contents
+
+- [Async Usage](#async-usage)
+- [Sync Usage](#sync-usage)
+- [Dry Run](#dry-run)
+- [SyncResult](#syncresult)
+- [Comparison Strategy](#comparison-strategy)
+- [Subdirectories](#subdirectories)
+
+---
+
 The sync manager performs a one-way push sync: it makes a remote KCFinder directory match a local directory. Files that exist locally but not remotely are uploaded; files that exist remotely but not locally are deleted; files that match by name and size are skipped.
 
 Two classes are available:

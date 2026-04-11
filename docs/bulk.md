@@ -1,5 +1,15 @@
 # Bulk Operations
 
+## Table of Contents
+
+- [copy](#copy)
+- [move](#move)
+- [bulk_delete](#bulk_delete)
+- [download_selected](#download_selected)
+- [Error Handling](#error-handling)
+
+---
+
 Bulk operations act on multiple files at once. They are available on both `AsyncKCFinderClient` (async) and `KCFinderClient` (sync).
 
 Files in bulk operations are identified by their full relative path from the KCFinder root, including the directory. For example, a file named `banner.jpg` inside `images/banners/` is referenced as `"images/banners/banner.jpg"`.

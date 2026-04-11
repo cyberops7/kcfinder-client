@@ -1,5 +1,21 @@
 # Exceptions
 
+## Table of Contents
+
+- [Why KCFinder Returns HTTP 200 for Errors](#why-kcfinder-returns-http-200-for-errors)
+- [Exception Hierarchy](#exception-hierarchy)
+- [Exception Reference](#exception-reference)
+  - [KCFinderError](#kcfindererror)
+  - [AuthError](#autherror)
+  - [ActionError](#actionerror)
+  - [FileOperationError](#fileoperationerror)
+  - [DirectoryOperationError](#directoryoperationerror)
+  - [PermissionDeniedError](#permissiondeniederror)
+  - [UploadError](#uploaderror)
+- [Catching Patterns](#catching-patterns)
+
+---
+
 ## Why KCFinder Returns HTTP 200 for Errors
 
 KCFinder's protocol always returns HTTP 200, even when an operation fails. Errors are communicated in the response body — either as a plain error string or as a JSON object like `{"error": "File not found"}`. This library inspects every response body and raises a Python exception if an error is detected.

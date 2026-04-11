@@ -1,5 +1,17 @@
 # File Operations
 
+## Table of Contents
+
+- [list_files](#list_files)
+- [upload](#upload)
+- [download](#download)
+- [delete](#delete)
+- [rename](#rename)
+- [get_thumbnail](#get_thumbnail)
+- [Error Handling](#error-handling)
+
+---
+
 All file operations are available on both `AsyncKCFinderClient` (async) and `KCFinderClient` (sync). The examples below show async usage first, with the sync equivalent immediately after.
 
 Directories in KCFinder are relative to the configured `uploadDir`. For example, if `uploadDir` is `files/` and you want to work in `files/images/banners/`, the `dir` argument is `"images/banners"`.
