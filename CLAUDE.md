@@ -29,7 +29,8 @@ inv test       # Run pytest
 inv lint       # Run ruff linter
 inv format     # Run ruff formatter
 inv tc         # Run pyrefly type checker
-inv check      # Lint + format check + typecheck (run this frequently)
+inv mdlint     # Run markdownlint on docs (requires Docker)
+inv check      # Lint + format + typecheck + mdlint (run this frequently)
 inv scan       # Security scan (bandit + pip-audit)
 inv build      # Build package with uv
 ```
