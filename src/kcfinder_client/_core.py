@@ -1,10 +1,32 @@
 """Shared request-building and response-parsing logic for KCFinder clients."""
 
+import json
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from kcfinder_client.exceptions import ActionError
 from kcfinder_client.models import DirTree, FileInfo
+
+
+def prefix_dir(file_type: str, dir: str) -> str:
+    """Build a type-prefixed directory path for KCFinder.
+
+    KCFinder expects all ``dir`` parameters to start with the file type
+    (e.g., ``images/subfolder``).  The PHP constructor validates this prefix
+    via ``checkInputDir`` and strips it before resolving the filesystem path.
+    """
+    if dir:
+        return f"{file_type}/{dir}"
+    return file_type
+
+
+def prefix_file_paths(file_type: str, paths: list[str]) -> list[str]:
+    """Prepend the file type to each path for bulk clipboard operations.
+
+    Bulk actions (cp_cbd, mv_cbd, rm_cbd) expect each file entry to be a
+    type-prefixed path like ``images/subfolder/photo.jpg``.
+    """
+    return [f"{file_type}/{p}" for p in paths]
 
 
 def build_action_url(browse_url: str, action: str, file_type: str | None) -> str:
@@ -71,17 +93,13 @@ def parse_dir_tree(raw: dict) -> DirTree:
     return _parse_tree_node(tree, files)
 
 
-def _parse_tree_node(
-    node: dict, files: list[FileInfo] | None = None
-) -> DirTree:
+def _parse_tree_node(node: dict, files: list[FileInfo] | None = None) -> DirTree:
     """Parse a single tree node recursively."""
     return DirTree(
         name=node["name"],
         is_writable=node.get("writable", False),
         has_subdirs=node.get("hasDirs", False),
-        children=[
-            _parse_tree_node(child) for child in node.get("dirs", [])
-        ],
+        children=[_parse_tree_node(child) for child in node.get("dirs", [])],
         files=files if files is not None else [],
     )
 
@@ -104,30 +122,48 @@ def check_upload_response(response_text: str) -> None:
 def check_action_error(action: str, response_body: str | dict) -> None:
     """Check a KCFinder response body for errors and raise if found.
 
-    KCFinder returns HTTP 200 even on errors. Success is indicated by the
-    string "true" for mutating actions, or valid JSON for query actions.
-    Errors are returned as plain strings or as {"error": "message"} dicts.
+    KCFinder returns HTTP 200 even on errors.  Successful mutating actions
+    return the string ``{}`` (PHP echoes ``{}`` when the handler returns
+    ``true``).  Query actions return valid JSON.  Errors come as plain
+    strings or ``{"error": "message"}`` dicts.  Bulk clipboard actions
+    return ``{"error": ["msg1", "msg2"]}`` with a list of per-file errors.
     """
     if isinstance(response_body, dict):
         if "error" in response_body:
-            raise ActionError(
-                action=action, message=response_body["error"]
-            )
+            err = response_body["error"]
+            msg = "; ".join(err) if isinstance(err, list) else str(err)
+            raise ActionError(action=action, message=msg)
         return  # empty dict or success dict without "error" key
     if isinstance(response_body, str):
         stripped = response_body.strip()
-        if stripped.lower() == "true" or stripped == "" or stripped == "{}":
+        if stripped == "" or stripped == "{}":
             return
         # Try to parse as JSON — some actions return JSON error strings
         try:
-            import json
-
             parsed = json.loads(stripped)
             if isinstance(parsed, dict) and "error" in parsed:
-                raise ActionError(
-                    action=action, message=parsed["error"]
-                )
+                err = parsed["error"]
+                msg = "; ".join(err) if isinstance(err, list) else str(err)
+                raise ActionError(action=action, message=msg)
             return  # valid JSON without "error" key
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError:
             pass
         raise ActionError(action=action, message=stripped)
+
+
+def parse_expand_response(raw: dict) -> list[DirTree]:
+    """Parse a KCFinder expand response into a list of DirTree nodes.
+
+    The expand action returns ``{"dirs": [{name, writable, hasDirs, ...}]}``.
+    Each entry describes a direct subdirectory (no nested children).
+    """
+    return [
+        DirTree(
+            name=d["name"],
+            is_writable=d.get("writable", False),
+            has_subdirs=d.get("hasDirs", False),
+            children=[],
+            files=[],
+        )
+        for d in raw.get("dirs", [])
+    ]

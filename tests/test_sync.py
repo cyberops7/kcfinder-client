@@ -12,7 +12,8 @@ async def test_push_uploads_new_files(session_auth, httpx_mock, tmp_path):
         url=f"{BROWSE_URL}?act=chDir&type=images",
         json={"files": [], "writable": True},
     )
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images&dir=remote_dir", text="")
+    upload_url = f"{BROWSE_URL}?act=upload&type=images&dir=images%2Fremote_dir"
+    httpx_mock.add_response(url=upload_url, text="")
 
     local_dir = tmp_path / "images"
     local_dir.mkdir()
@@ -41,10 +42,10 @@ async def test_push_deletes_remote_only_files(session_auth, httpx_mock, tmp_path
                     "writable": True,
                 },
             ],
-            "writable": True,
+            "dirWritable": True,
         },
     )
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=delete&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=delete&type=images", text="{}")
 
     local_dir = tmp_path / "images"
     local_dir.mkdir()
@@ -77,7 +78,7 @@ async def test_push_skips_matching_files(session_auth, httpx_mock, tmp_path):
                     "writable": True,
                 },
             ],
-            "writable": True,
+            "dirWritable": True,
         },
     )
 
@@ -108,10 +109,11 @@ async def test_push_uploads_size_mismatch(session_auth, httpx_mock, tmp_path):
                     "writable": True,
                 },
             ],
-            "writable": True,
+            "dirWritable": True,
         },
     )
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images&dir=remote_dir", text="")
+    upload_url = f"{BROWSE_URL}?act=upload&type=images&dir=images%2Fremote_dir"
+    httpx_mock.add_response(url=upload_url, text="")
 
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         manager = SyncManager(client)
@@ -136,7 +138,7 @@ async def test_push_dry_run(session_auth, httpx_mock, tmp_path):
                     "writable": True,
                 },
             ],
-            "writable": True,
+            "dirWritable": True,
         },
     )
 
@@ -159,7 +161,8 @@ def test_push_sync_uploads_new_files(session_auth, httpx_mock, tmp_path):
         url=f"{BROWSE_URL}?act=chDir&type=images",
         json={"files": [], "writable": True},
     )
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images&dir=remote_dir", text="")
+    upload_url = f"{BROWSE_URL}?act=upload&type=images&dir=images%2Fremote_dir"
+    httpx_mock.add_response(url=upload_url, text="")
 
     local_dir = tmp_path / "images"
     local_dir.mkdir()
@@ -187,7 +190,7 @@ def test_push_sync_dry_run(session_auth, httpx_mock, tmp_path):
                     "writable": True,
                 },
             ],
-            "writable": True,
+            "dirWritable": True,
         },
     )
 

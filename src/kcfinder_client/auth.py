@@ -86,15 +86,12 @@ class HarmonySiteAuth(BaseAuth):
             follow_redirects=True,
         )
         if login_resp.status_code != 200:
-            raise AuthError(
-                f"Login failed with status {login_resp.status_code}"
-            )
+            raise AuthError(f"Login failed with status {login_resp.status_code}")
 
         init_resp = await session.get(self._init_url())
         if init_resp.status_code != 200:
             raise AuthError(
-                "KCFinder session init failed with status "
-                f"{init_resp.status_code}"
+                f"KCFinder session init failed with status {init_resp.status_code}"
             )
 
     def authenticate_sync(self, session: httpx.Client) -> None:
@@ -104,15 +101,12 @@ class HarmonySiteAuth(BaseAuth):
             follow_redirects=True,
         )
         if login_resp.status_code != 200:
-            raise AuthError(
-                f"Login failed with status {login_resp.status_code}"
-            )
+            raise AuthError(f"Login failed with status {login_resp.status_code}")
 
         init_resp = session.get(self._init_url())
         if init_resp.status_code != 200:
             raise AuthError(
-                "KCFinder session init failed with status "
-                f"{init_resp.status_code}"
+                f"KCFinder session init failed with status {init_resp.status_code}"
             )
 
     def get_referer(self) -> str:

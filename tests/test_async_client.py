@@ -33,7 +33,7 @@ async def test_list_files(session_auth, httpx_mock):
                     "writable": False,
                 },
             ],
-            "writable": True,
+            "dirWritable": True,
         },
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
@@ -47,7 +47,7 @@ async def test_list_files(session_auth, httpx_mock):
 async def test_list_files_empty_dir(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=chDir&type=images",
-        json={"files": [], "writable": True},
+        json={"files": [], "dirWritable": True},
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         files = await client.list_files("empty-dir")
@@ -57,7 +57,7 @@ async def test_list_files_empty_dir(session_auth, httpx_mock):
 @pytest.mark.asyncio
 async def test_upload_single_file(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
-        url=f"{BROWSE_URL}?act=upload&type=images&dir=test_dir",
+        url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir",
         text="",
     )
     test_file = tmp_path / "photo.jpg"
@@ -69,7 +69,7 @@ async def test_upload_single_file(session_auth, httpx_mock, tmp_path):
 @pytest.mark.asyncio
 async def test_upload_multiple_files(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
-        url=f"{BROWSE_URL}?act=upload&type=images&dir=test_dir",
+        url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir",
         text="",
     )
     file_a = tmp_path / "a.jpg"
@@ -81,10 +81,22 @@ async def test_upload_multiple_files(session_auth, httpx_mock, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_upload_root_dir(session_auth, httpx_mock, tmp_path):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=upload&type=images&dir=images",
+        text="",
+    )
+    test_file = tmp_path / "photo.jpg"
+    test_file.write_bytes(b"fake image data")
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        await client.upload("", test_file)
+
+
+@pytest.mark.asyncio
 async def test_delete(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=delete&type=images",
-        text="true",
+        text="{}",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.delete("test_dir", "old.jpg")
@@ -94,10 +106,10 @@ async def test_delete(session_auth, httpx_mock):
 async def test_delete_error(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=delete&type=images",
-        text="File not found",
+        json={"error": "Unknown error."},
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
-        with pytest.raises(ActionError, match="File not found"):
+        with pytest.raises(ActionError, match="Unknown error"):
             await client.delete("test_dir", "missing.jpg")
 
 
@@ -105,7 +117,7 @@ async def test_delete_error(session_auth, httpx_mock):
 async def test_rename(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=rename&type=images",
-        text="true",
+        text="{}",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.rename("test_dir", "old.jpg", "new.jpg")
@@ -125,7 +137,7 @@ async def test_download(session_auth, httpx_mock):
 @pytest.mark.asyncio
 async def test_get_thumbnail(session_auth, httpx_mock):
     httpx_mock.add_response(
-        url=f"{BROWSE_URL}?act=thumb&type=images",
+        url=f"{BROWSE_URL}?act=thumb&type=images&dir=images%2Ftest_dir&file=photo.jpg",
         content=b"png data",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
@@ -174,18 +186,38 @@ async def test_get_tree(session_auth, httpx_mock):
 async def test_expand(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=expand&type=images",
-        json={"dirs": ["sub1", "sub2"]},
+        json={
+            "dirs": [
+                {
+                    "name": "sub1",
+                    "readable": True,
+                    "writable": True,
+                    "removable": True,
+                    "hasDirs": False,
+                },
+                {
+                    "name": "sub2",
+                    "readable": True,
+                    "writable": True,
+                    "removable": True,
+                    "hasDirs": True,
+                },
+            ],
+        },
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         subdirs = await client.expand("test_dir")
-    assert subdirs == ["sub1", "sub2"]
+    assert len(subdirs) == 2
+    assert isinstance(subdirs[0], DirTree)
+    assert subdirs[0].name == "sub1"
+    assert subdirs[1].has_subdirs is True
 
 
 @pytest.mark.asyncio
 async def test_create_dir(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=newDir&type=images",
-        text="true",
+        text="{}",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.create_dir("parent", "newdir")
@@ -205,7 +237,7 @@ async def test_rename_dir(session_auth, httpx_mock):
 async def test_delete_dir(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=deleteDir&type=images",
-        text="true",
+        text="{}",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.delete_dir("olddir")
@@ -226,7 +258,7 @@ async def test_download_dir(session_auth, httpx_mock):
 async def test_copy(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=cp_cbd&type=images",
-        text="true",
+        text="{}",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.copy(["dir/a.jpg", "dir/b.jpg"], dest="archive")
@@ -236,7 +268,7 @@ async def test_copy(session_auth, httpx_mock):
 async def test_move(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=mv_cbd&type=images",
-        text="true",
+        text="{}",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.move(["dir/a.jpg", "dir/b.jpg"], dest="archive")
@@ -246,7 +278,7 @@ async def test_move(session_auth, httpx_mock):
 async def test_bulk_delete(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=rm_cbd&type=images",
-        text="true",
+        text="{}",
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.bulk_delete(["dir/a.jpg", "dir/b.jpg"])
@@ -256,11 +288,11 @@ async def test_bulk_delete(session_auth, httpx_mock):
 async def test_bulk_delete_error(session_auth, httpx_mock):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=rm_cbd&type=images",
-        json={"error": "Permission denied"},
+        json={"error": ["Cannot delete 'a.jpg'", "Cannot delete 'b.jpg'"]},
     )
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
-        with pytest.raises(ActionError, match="Permission denied"):
-            await client.bulk_delete(["dir/protected.jpg"])
+        with pytest.raises(ActionError, match="Cannot delete 'a.jpg'"):
+            await client.bulk_delete(["dir/a.jpg", "dir/b.jpg"])
 
 
 @pytest.mark.asyncio

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from types import TracebackType
+from urllib.parse import urlencode
 
 import httpx
 
@@ -12,7 +13,10 @@ from kcfinder_client._core import (
     check_action_error,
     check_upload_response,
     parse_dir_tree,
+    parse_expand_response,
     parse_file_list,
+    prefix_dir,
+    prefix_file_paths,
 )
 from kcfinder_client.auth import BaseAuth
 from kcfinder_client.models import DirTree, FileInfo
@@ -60,7 +64,7 @@ class KCFinderClient:
 
     def list_files(self, dir: str) -> list[FileInfo]:
         """List files in a directory."""
-        data = build_form_data(dir=dir)
+        data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = self._post("chDir", data)
         return parse_file_list(response.json())
 
@@ -68,14 +72,10 @@ class KCFinderClient:
         """Upload one or more files to a directory."""
         if isinstance(files, Path):
             files = [files]
-        url = build_action_url(
-            self._browse_url, "upload", self._file_type
-        )
-        url += f"&dir={dir}"
+        url = build_action_url(self._browse_url, "upload", self._file_type)
+        url += "&" + urlencode({"dir": prefix_dir(self._file_type, dir)})
         headers = build_headers(self._auth.get_referer())
-        upload_files = [
-            ("upload[]", (f.name, f.read_bytes())) for f in files
-        ]
+        upload_files = [("upload[]", (f.name, f.read_bytes())) for f in files]
         response = self._get_client().post(
             url,
             files=upload_files,
@@ -85,26 +85,41 @@ class KCFinderClient:
 
     def delete(self, dir: str, file: str) -> None:
         """Delete a file."""
-        data = build_form_data(dir=dir, file=file)
+        data = build_form_data(dir=prefix_dir(self._file_type, dir), file=file)
         response = self._post("delete", data)
         check_action_error("delete", response.text)
 
     def rename(self, dir: str, file: str, new_name: str) -> None:
         """Rename a file."""
-        data = build_form_data(dir=dir, file=file, new_name=new_name)
+        data = build_form_data(
+            dir=prefix_dir(self._file_type, dir),
+            file=file,
+            new_name=new_name,
+        )
         response = self._post("rename", data)
         check_action_error("rename", response.text)
 
     def download(self, dir: str, file: str) -> bytes:
         """Download a file and return its content as bytes."""
-        data = build_form_data(dir=dir, file=file)
+        data = build_form_data(dir=prefix_dir(self._file_type, dir), file=file)
         response = self._post("download", data)
         return response.content
 
     def get_thumbnail(self, dir: str, file: str) -> bytes:
-        """Get the thumbnail for a file as PNG bytes."""
-        data = build_form_data(dir=dir, file=file)
-        response = self._post("thumb", data)
+        """Get the thumbnail for a file as PNG bytes.
+
+        Thumbnails are served via GET parameters (used as ``<img src>``
+        in the browser UI), not POST form data.
+        """
+        params = {
+            "act": "thumb",
+            "type": self._file_type,
+            "dir": prefix_dir(self._file_type, dir),
+            "file": file,
+        }
+        url = f"{self._browse_url}?{urlencode(params)}"
+        headers = build_headers(self._auth.get_referer())
+        response = self._get_client().get(url, headers=headers)
         return response.content
 
     def get_tree(self) -> DirTree:
@@ -114,49 +129,50 @@ class KCFinderClient:
         response = self._get_client().post(url, headers=headers)
         return parse_dir_tree(response.json())
 
-    def expand(self, dir: str) -> list[str]:
-        """Get subdirectory names within a directory."""
-        data = build_form_data(dir=dir)
+    def expand(self, dir: str) -> list[DirTree]:
+        """Get subdirectory info for a directory."""
+        data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = self._post("expand", data)
-        return response.json().get("dirs", [])
+        return parse_expand_response(response.json())
 
     def create_dir(self, dir: str, new_dir: str) -> None:
         """Create a new subdirectory."""
-        data = build_form_data(dir=dir, new_dir=new_dir)
+        data = build_form_data(dir=prefix_dir(self._file_type, dir), new_dir=new_dir)
         response = self._post("newDir", data)
         check_action_error("newDir", response.text)
 
     def rename_dir(self, dir: str, new_name: str) -> None:
         """Rename a directory."""
-        data = build_form_data(dir=dir, new_name=new_name)
+        data = build_form_data(dir=prefix_dir(self._file_type, dir), new_name=new_name)
         response = self._post("renameDir", data)
-        body = response.json()
-        if "error" in body:
-            check_action_error("renameDir", body)
+        check_action_error("renameDir", response.text)
 
     def delete_dir(self, dir: str) -> None:
         """Delete a directory recursively."""
-        data = build_form_data(dir=dir)
+        data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = self._post("deleteDir", data)
         check_action_error("deleteDir", response.text)
 
     def download_dir(self, dir: str) -> bytes:
         """Download a directory as a ZIP archive."""
-        data = build_form_data(dir=dir)
+        data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = self._post("downloadDir", data)
         return response.content
 
     def _bulk_action(
         self, action: str, files: list[str], dest: str | None = None
     ) -> None:
-        """Shared logic for bulk copy/move/delete actions."""
-        data = build_form_data(files=files)
+        """Shared logic for bulk copy/move/delete actions.
+
+        File paths are automatically prefixed with the file type (e.g.,
+        ``images/subdir/file.jpg``) as required by the KCFinder protocol.
+        """
+        prefixed = prefix_file_paths(self._file_type, files)
+        data = build_form_data(files=prefixed)
         if dest is not None:
-            data["dir"] = dest
+            data["dir"] = prefix_dir(self._file_type, dest)
         response = self._post(action, data)
-        body = response.text.strip()
-        if body.lower() != "true":
-            check_action_error(action, response.json())
+        check_action_error(action, response.text)
 
     def copy(self, files: list[str], dest: str) -> None:
         """Copy files to a destination directory."""
@@ -171,7 +187,11 @@ class KCFinderClient:
         self._bulk_action("rm_cbd", files)
 
     def download_selected(self, dir: str, files: list[str]) -> bytes:
-        """Download selected files as a ZIP archive."""
-        data = build_form_data(dir=dir, files=files)
+        """Download selected files as a ZIP archive.
+
+        Unlike bulk clipboard operations, ``files`` here are plain
+        filenames (basenames) within the specified directory.
+        """
+        data = build_form_data(dir=prefix_dir(self._file_type, dir), files=files)
         response = self._post("downloadSelected", data)
         return response.content

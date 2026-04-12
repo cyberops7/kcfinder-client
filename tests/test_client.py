@@ -24,7 +24,7 @@ def test_list_files(session_auth, httpx_mock):
                     "writable": True,
                 },
             ],
-            "writable": True,
+            "dirWritable": True,
         },
     )
     with KCFinderClient(BROWSE_URL, session_auth) as client:
@@ -34,7 +34,9 @@ def test_list_files(session_auth, httpx_mock):
 
 
 def test_upload(session_auth, httpx_mock, tmp_path):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=upload&type=images&dir=test_dir", text="")
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir", text=""
+    )
     test_file = tmp_path / "photo.jpg"
     test_file.write_bytes(b"fake image data")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
@@ -42,22 +44,23 @@ def test_upload(session_auth, httpx_mock, tmp_path):
 
 
 def test_delete(session_auth, httpx_mock):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=delete&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=delete&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.delete("test_dir", "old.jpg")
 
 
 def test_delete_error(session_auth, httpx_mock):
     httpx_mock.add_response(
-        url=f"{BROWSE_URL}?act=delete&type=images", text="File not found"
+        url=f"{BROWSE_URL}?act=delete&type=images",
+        json={"error": "Unknown error."},
     )
     with KCFinderClient(BROWSE_URL, session_auth) as client:
-        with pytest.raises(ActionError, match="File not found"):
+        with pytest.raises(ActionError, match="Unknown error"):
             client.delete("test_dir", "missing.jpg")
 
 
 def test_rename(session_auth, httpx_mock):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=rename&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=rename&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.rename("test_dir", "old.jpg", "new.jpg")
 
@@ -73,7 +76,8 @@ def test_download(session_auth, httpx_mock):
 
 def test_get_thumbnail(session_auth, httpx_mock):
     httpx_mock.add_response(
-        url=f"{BROWSE_URL}?act=thumb&type=images", content=b"png data"
+        url=f"{BROWSE_URL}?act=thumb&type=images&dir=images%2Ftest_dir&file=photo.jpg",
+        content=b"png data",
     )
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         thumb = client.get_thumbnail("test_dir", "photo.jpg")
@@ -95,15 +99,28 @@ def test_get_tree(session_auth, httpx_mock):
 
 def test_expand(session_auth, httpx_mock):
     httpx_mock.add_response(
-        url=f"{BROWSE_URL}?act=expand&type=images", json={"dirs": ["sub1"]}
+        url=f"{BROWSE_URL}?act=expand&type=images",
+        json={
+            "dirs": [
+                {
+                    "name": "sub1",
+                    "readable": True,
+                    "writable": True,
+                    "removable": True,
+                    "hasDirs": False,
+                },
+            ],
+        },
     )
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         subdirs = client.expand("test_dir")
-    assert subdirs == ["sub1"]
+    assert len(subdirs) == 1
+    assert isinstance(subdirs[0], DirTree)
+    assert subdirs[0].name == "sub1"
 
 
 def test_create_dir(session_auth, httpx_mock):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=newDir&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=newDir&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.create_dir("parent", "newdir")
 
@@ -117,7 +134,7 @@ def test_rename_dir(session_auth, httpx_mock):
 
 
 def test_delete_dir(session_auth, httpx_mock):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=deleteDir&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=deleteDir&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.delete_dir("olddir")
 
@@ -132,19 +149,19 @@ def test_download_dir(session_auth, httpx_mock):
 
 
 def test_copy(session_auth, httpx_mock):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=cp_cbd&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=cp_cbd&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.copy(["dir/a.jpg", "dir/b.jpg"], dest="archive")
 
 
 def test_move(session_auth, httpx_mock):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=mv_cbd&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=mv_cbd&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.move(["dir/a.jpg", "dir/b.jpg"], dest="archive")
 
 
 def test_bulk_delete(session_auth, httpx_mock):
-    httpx_mock.add_response(url=f"{BROWSE_URL}?act=rm_cbd&type=images", text="true")
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=rm_cbd&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.bulk_delete(["dir/a.jpg", "dir/b.jpg"])
 

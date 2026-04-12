@@ -8,10 +8,30 @@ from kcfinder_client._core import (
     build_headers,
     check_action_error,
     parse_dir_tree,
+    parse_expand_response,
     parse_file_list,
+    prefix_dir,
+    prefix_file_paths,
 )
 from kcfinder_client.exceptions import ActionError
 from kcfinder_client.models import DirTree
+
+
+def test_prefix_dir_with_subdir():
+    assert prefix_dir("images", "subfolder") == "images/subfolder"
+
+
+def test_prefix_dir_with_nested_subdir():
+    assert prefix_dir("images", "a/b/c") == "images/a/b/c"
+
+
+def test_prefix_dir_root():
+    assert prefix_dir("images", "") == "images"
+
+
+def test_prefix_file_paths():
+    result = prefix_file_paths("images", ["dir/a.jpg", "dir/b.jpg"])
+    assert result == ["images/dir/a.jpg", "images/dir/b.jpg"]
 
 
 def test_build_action_url():
@@ -31,28 +51,28 @@ def test_build_headers():
 
 
 def test_build_form_data_with_dir():
-    data = build_form_data(dir="test_dir")
-    assert data == {"dir": "test_dir"}
+    data = build_form_data(dir="images/test_dir")
+    assert data == {"dir": "images/test_dir"}
 
 
 def test_build_form_data_with_dir_and_file():
-    data = build_form_data(dir="test_dir", file="photo.jpg")
-    assert data == {"dir": "test_dir", "file": "photo.jpg"}
+    data = build_form_data(dir="images/test_dir", file="photo.jpg")
+    assert data == {"dir": "images/test_dir", "file": "photo.jpg"}
 
 
 def test_build_form_data_with_new_name():
-    data = build_form_data(dir="test_dir", file="old.jpg", new_name="new.jpg")
-    assert data == {"dir": "test_dir", "file": "old.jpg", "newName": "new.jpg"}
+    data = build_form_data(dir="images/test_dir", file="old.jpg", new_name="new.jpg")
+    assert data == {"dir": "images/test_dir", "file": "old.jpg", "newName": "new.jpg"}
 
 
 def test_build_form_data_with_new_dir():
-    data = build_form_data(dir="parent", new_dir="child")
-    assert data == {"dir": "parent", "newDir": "child"}
+    data = build_form_data(dir="images/parent", new_dir="child")
+    assert data == {"dir": "images/parent", "newDir": "child"}
 
 
 def test_build_form_data_with_files_list():
-    data = build_form_data(files=["dir/a.jpg", "dir/b.jpg"])
-    assert data == {"files[]": ["dir/a.jpg", "dir/b.jpg"]}
+    data = build_form_data(files=["images/dir/a.jpg", "images/dir/b.jpg"])
+    assert data == {"files[]": ["images/dir/a.jpg", "images/dir/b.jpg"]}
 
 
 def test_parse_file_list():
@@ -73,7 +93,7 @@ def test_parse_file_list():
                 "writable": False,
             },
         ],
-        "writable": True,
+        "dirWritable": True,
     }
     files = parse_file_list(raw)
     assert len(files) == 2
@@ -84,14 +104,17 @@ def test_parse_file_list():
 
 
 def test_parse_file_list_empty():
-    raw = {"files": [], "writable": True}
+    raw = {"files": [], "dirWritable": True}
     files = parse_file_list(raw)
     assert files == []
 
 
-def test_check_action_error_with_true():
-    # KCFinder returns "true" (as a string) on success for mutating actions
-    check_action_error("delete", "true")  # should not raise
+def test_check_action_error_with_empty_dict():
+    check_action_error("delete", "{}")  # should not raise
+
+
+def test_check_action_error_with_empty_string():
+    check_action_error("delete", "")  # should not raise
 
 
 def test_check_action_error_with_error_string():
@@ -102,6 +125,13 @@ def test_check_action_error_with_error_string():
 def test_check_action_error_with_json_error():
     with pytest.raises(ActionError, match="not found"):
         check_action_error("rename", {"error": "not found"})
+
+
+def test_check_action_error_with_error_list():
+    with pytest.raises(ActionError, match="Cannot copy 'a.jpg'; Cannot copy 'b.jpg'"):
+        check_action_error(
+            "cp_cbd", {"error": ["Cannot copy 'a.jpg'", "Cannot copy 'b.jpg'"]}
+        )
 
 
 def test_parse_dir_tree():
@@ -143,3 +173,36 @@ def test_parse_dir_tree():
     assert tree.children[0].has_subdirs is False
     assert len(tree.files) == 1
     assert tree.files[0].name == "root.jpg"
+
+
+def test_parse_expand_response():
+    raw = {
+        "dirs": [
+            {
+                "name": "sub1",
+                "readable": True,
+                "writable": True,
+                "removable": True,
+                "hasDirs": False,
+            },
+            {
+                "name": "sub2",
+                "readable": True,
+                "writable": False,
+                "removable": False,
+                "hasDirs": True,
+            },
+        ],
+    }
+    dirs = parse_expand_response(raw)
+    assert len(dirs) == 2
+    assert isinstance(dirs[0], DirTree)
+    assert dirs[0].name == "sub1"
+    assert dirs[0].has_subdirs is False
+    assert dirs[1].name == "sub2"
+    assert dirs[1].has_subdirs is True
+    assert dirs[1].is_writable is False
+
+
+def test_parse_expand_response_empty():
+    assert parse_expand_response({"dirs": []}) == []
