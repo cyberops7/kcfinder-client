@@ -24,6 +24,10 @@ For HarmonySite's KCFinder fork. Authenticates in two steps:
 2. GET the KCFinder browse URL with `bros_config` and `brosseccheck` query
    params to initialize the KCFinder session
 
+The `bros_config` and `brosseccheck` params are also sent as query parameters
+on every subsequent KCFinder request (the HarmonySite fork requires them to
+authorize each action, not just the session init).
+
 ```python
 from kcfinder_client import HarmonySiteAuth
 
@@ -32,38 +36,34 @@ auth = HarmonySiteAuth(
     browse_url="https://example.harmonysong.com/kcfinder/browse.php",
     username="admin",
     password="secret",
-    bros_config={
-        "uploadDir": "files/",
-        "thumbsDir": "files/.thumbs/",
-        "uploadURL": "https://example.harmonysong.com/files/",
-    },
+    bros_config=(
+        'a:3:{s:9:"uploadDir";s:6:"files/";'
+        's:9:"thumbsDir";s:14:"files/.thumbs/";'
+        's:9:"uploadURL";s:0:"";}'
+    ),
     brosseccheck="Xx-ok-xX",  # optional, default is "Xx-ok-xX"
 )
 ```
 
 #### Constructor Parameters
 
-| Parameter      | Type   | Required | Description                                    |
-|----------------|--------|----------|------------------------------------------------|
-| `login_url`    | `str`  | Yes      | The HarmonySite `dbaction.php` login endpoint  |
-| `browse_url`   | `str`  | Yes      | The KCFinder `browse.php` URL                  |
-| `username`     | `str`  | Yes      | HarmonySite login username                     |
-| `password`     | `str`  | Yes      | HarmonySite login password                     |
-| `bros_config`  | `dict` | Yes      | KCFinder configuration dictionary (see below)  |
-| `brosseccheck` | `str`  | No       | Security token; default is `"Xx-ok-xX"`        |
+| Parameter      | Type  | Required | Description                                    |
+|----------------|-------|----------|------------------------------------------------|
+| `login_url`    | `str` | Yes      | The HarmonySite `dbaction.php` login endpoint  |
+| `browse_url`   | `str` | Yes      | The KCFinder `browse.php` URL                  |
+| `username`     | `str` | Yes      | HarmonySite login username                     |
+| `password`     | `str` | Yes      | HarmonySite login password                     |
+| `bros_config`  | `str` | Yes      | PHP-serialized KCFinder config (see below)     |
+| `brosseccheck` | `str` | No       | Security token; default is `"Xx-ok-xX"`        |
 
 <details>
 <summary><strong>bros_config reference</strong></summary>
 
-The `bros_config` dict is deserialized by HarmonySite's KCFinder fork to
-configure the file manager session. At minimum it should contain:
+The `bros_config` is a PHP-serialized string that HarmonySite's KCFinder fork
+uses to configure the file manager session. It must contain at minimum:
 
-```json
-{
-    "uploadDir": "files/",
-    "thumbsDir": "files/.thumbs/",
-    "uploadURL": "https://example.harmonysong.com/files/"
-}
+```
+a:3:{s:9:"uploadDir";s:6:"files/";s:9:"thumbsDir";s:14:"files/.thumbs/";s:9:"uploadURL";s:0:"";}
 ```
 
 | Key          | Description                                        |
@@ -72,8 +72,10 @@ configure the file manager session. At minimum it should contain:
 | `thumbsDir`  | Server-relative path to the thumbnails directory   |
 | `uploadURL`  | Public URL prefix for uploaded files               |
 
-The dict is JSON-encoded and passed as a query parameter on the initial
-`browse.php` GET request.
+> [!IMPORTANT]
+> The value must be a valid PHP-serialized string with double quotes
+> around string values (e.g., `s:9:"uploadDir"`). Stripping or
+> escaping the quotes will cause silent auth failures.
 
 </details>
 
@@ -115,13 +117,13 @@ auth = harmonysite_auth_from_env()
 
 ### Required Variables
 
-| Variable                | Description                                  |
-|-------------------------|----------------------------------------------|
-| `KCFINDER_LOGIN_URL`    | The HarmonySite login URL (`dbaction.php`)   |
-| `KCFINDER_BROWSE_URL`   | The KCFinder `browse.php` URL                |
-| `KCFINDER_USERNAME`     | Login username                               |
-| `KCFINDER_PASSWORD`     | Login password                               |
-| `KCFINDER_BROS_CONFIG`  | JSON string of the `bros_config` dict        |
+| Variable                | Description                                          |
+|-------------------------|------------------------------------------------------|
+| `KCFINDER_LOGIN_URL`    | The HarmonySite login URL (`dbaction.php`)           |
+| `KCFINDER_BROWSE_URL`   | The KCFinder `browse.php` URL                        |
+| `KCFINDER_USERNAME`     | Login username                                       |
+| `KCFINDER_PASSWORD`     | Login password                                       |
+| `KCFINDER_BROS_CONFIG`  | PHP-serialized `bros_config` string (with quotes)    |
 
 ### Optional Variables
 
@@ -137,7 +139,7 @@ KCFINDER_LOGIN_URL=https://example.harmonysong.com/dbaction.php
 KCFINDER_BROWSE_URL=https://example.harmonysong.com/kcfinder/browse.php
 KCFINDER_USERNAME=admin
 KCFINDER_PASSWORD=secret
-KCFINDER_BROS_CONFIG={"uploadDir":"files/","thumbsDir":"files/.thumbs/","uploadURL":"https://example.harmonysong.com/files/"}
+KCFINDER_BROS_CONFIG=a:3:{s:9:"uploadDir";s:6:"files/";s:9:"thumbsDir";s:14:"files/.thumbs/";s:9:"uploadURL";s:0:"";}
 ```
 
 </details>
@@ -145,7 +147,7 @@ KCFINDER_BROS_CONFIG={"uploadDir":"files/","thumbsDir":"files/.thumbs/","uploadU
 ## Custom Auth
 
 To support a different authentication scheme, subclass `BaseAuth` and
-implement its three methods:
+implement its methods:
 
 ```python
 from kcfinder_client import BaseAuth
@@ -163,6 +165,12 @@ class MyCustomAuth(BaseAuth):
     def get_referer(self) -> str:
         # Return the URL to use as the Referer header
         return "https://example.com/kcfinder/browse.php"
+
+    def get_query_params(self) -> dict[str, str]:
+        # Return extra query params to include on every request URL.
+        # Override this if your KCFinder fork requires additional
+        # params beyond act and type. Default returns empty dict.
+        return {}
 ```
 
 ---

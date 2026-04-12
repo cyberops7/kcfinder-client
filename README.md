@@ -37,6 +37,7 @@ pip install kcfinder-client
 
 ```python
 import asyncio
+import os
 from kcfinder_client import AsyncKCFinderClient, HarmonySiteAuth
 
 auth = HarmonySiteAuth(
@@ -44,16 +45,17 @@ auth = HarmonySiteAuth(
     browse_url="https://example.harmonysong.com/kcfinder/browse.php",
     username="admin",
     password="secret",
-    bros_config={
-        "uploadDir": "files/",
-        "thumbsDir": "files/.thumbs/",
-        "uploadURL": "https://example.harmonysong.com/files/",
-    },
+    bros_config=(
+        'a:3:{s:9:"uploadDir";s:6:"files/";'
+        's:9:"thumbsDir";s:14:"files/.thumbs/";'
+        's:9:"uploadURL";s:0:"";}'
+    ),
 )
 
 async def main():
-    async with AsyncKCFinderClient(auth.browse_url, auth) as client:
-        files = await client.list_files("images/banners")
+    browse_url = "https://example.harmonysong.com/kcfinder/browse.php"
+    async with AsyncKCFinderClient(browse_url, auth) as client:
+        files = await client.list_files("banners")
         for f in files:
             print(f.name, f.size)
 
@@ -70,15 +72,16 @@ auth = HarmonySiteAuth(
     browse_url="https://example.harmonysong.com/kcfinder/browse.php",
     username="admin",
     password="secret",
-    bros_config={
-        "uploadDir": "files/",
-        "thumbsDir": "files/.thumbs/",
-        "uploadURL": "https://example.harmonysong.com/files/",
-    },
+    bros_config=(
+        'a:3:{s:9:"uploadDir";s:6:"files/";'
+        's:9:"thumbsDir";s:14:"files/.thumbs/";'
+        's:9:"uploadURL";s:0:"";}'
+    ),
 )
 
-with KCFinderClient(auth.browse_url, auth) as client:
-    files = client.list_files("images/banners")
+browse_url = "https://example.harmonysong.com/kcfinder/browse.php"
+with KCFinderClient(browse_url, auth) as client:
+    files = client.list_files("banners")
     for f in files:
         print(f.name, f.size)
 ```
@@ -92,17 +95,19 @@ export KCFINDER_LOGIN_URL=https://example.harmonysong.com/dbaction.php
 export KCFINDER_BROWSE_URL=https://example.harmonysong.com/kcfinder/browse.php
 export KCFINDER_USERNAME=admin
 export KCFINDER_PASSWORD=secret
-export KCFINDER_BROS_CONFIG='{"uploadDir":"files/","thumbsDir":"files/.thumbs/","uploadURL":"https://example.harmonysong.com/files/"}'
+export KCFINDER_BROS_CONFIG='a:3:{s:9:"uploadDir";s:6:"files/";s:9:"thumbsDir";s:14:"files/.thumbs/";s:9:"uploadURL";s:0:"";}'
 ```
 
 ```python
+import os
 from kcfinder_client import AsyncKCFinderClient, harmonysite_auth_from_env
 import asyncio
 
 async def main():
     auth = harmonysite_auth_from_env()
-    async with AsyncKCFinderClient(auth.get_referer(), auth) as client:
-        files = await client.list_files("images")
+    browse_url = os.environ["KCFINDER_BROWSE_URL"]
+    async with AsyncKCFinderClient(browse_url, auth) as client:
+        files = await client.list_files()
         print(f"Found {len(files)} files")
 
 asyncio.run(main())
@@ -113,22 +118,24 @@ asyncio.run(main())
 One-way push sync to make a remote directory match a local one:
 
 ```python
+import os
 from pathlib import Path
 from kcfinder_client import KCFinderClient, SyncManagerSync, harmonysite_auth_from_env
 
 auth = harmonysite_auth_from_env()
+browse_url = os.environ["KCFINDER_BROWSE_URL"]
 
-with KCFinderClient(auth.get_referer(), auth) as client:
+with KCFinderClient(browse_url, auth) as client:
     sync = SyncManagerSync(client)
 
     # Dry run first to preview changes
-    result = sync.push("images/banners", Path("./banners"), dry_run=True)
+    result = sync.push("banners", Path("./banners"), dry_run=True)
     print(f"Would upload: {result.uploaded}")
     print(f"Would delete: {result.deleted}")
     print(f"Would skip:   {result.skipped}")
 
     # Apply the sync
-    result = sync.push("images/banners", Path("./banners"))
+    result = sync.push("banners", Path("./banners"))
 ```
 
 ## Documentation

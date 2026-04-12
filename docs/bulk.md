@@ -13,50 +13,53 @@
 Bulk operations act on multiple files at once. They are available on both
 `AsyncKCFinderClient` (async) and `KCFinderClient` (sync).
 
-Files in bulk operations are identified by their full relative path from the
-KCFinder root, including the directory. For example, a file named `banner.jpg`
-inside `images/banners/` is referenced as `"images/banners/banner.jpg"`.
+Files in `copy`, `move`, and `bulk_delete` are identified by their path
+relative to the file type root. For example, a file named `banner.jpg`
+inside `banners/` is referenced as `"banners/banner.jpg"`. The type prefix
+(e.g., `images/`) is added internally by the client.
 
 ## copy
 
 Copy one or more files to a destination directory. The original files remain
-in place.
+in place. Accepts a single path string or a list.
 
 ```python
+# Single file
+await client.copy("banners/spring.jpg", dest="archive/2024")
+client.copy("banners/spring.jpg", dest="archive/2024")
+
+# Multiple files
 files = [
-    "images/banners/spring.jpg",
-    "images/banners/summer.jpg",
+    "banners/spring.jpg",
+    "banners/summer.jpg",
 ]
-
-# Async
-await client.copy(files, dest="images/archive/2024")
-
-# Sync
-client.copy(files, dest="images/archive/2024")
+await client.copy(files, dest="archive/2024")
+client.copy(files, dest="archive/2024")
 ```
 
-After this call, both `images/banners/spring.jpg` and
-`images/archive/2024/spring.jpg` exist.
+After this call, both `banners/spring.jpg` and `archive/2024/spring.jpg`
+exist.
 
 ## move
 
 Move one or more files to a destination directory. The original files are
-removed.
+removed. Accepts a single path string or a list.
 
 ```python
+# Single file
+await client.move("inbox/photo1.jpg", dest="gallery")
+client.move("inbox/photo1.jpg", dest="gallery")
+
+# Multiple files
 files = [
-    "images/inbox/photo1.jpg",
-    "images/inbox/photo2.jpg",
+    "inbox/photo1.jpg",
+    "inbox/photo2.jpg",
 ]
-
-# Async
-await client.move(files, dest="images/gallery")
-
-# Sync
-client.move(files, dest="images/gallery")
+await client.move(files, dest="gallery")
+client.move(files, dest="gallery")
 ```
 
-After this call, the files exist only in `images/gallery/`.
+After this call, the files exist only in `gallery/`.
 
 ## bulk_delete
 
@@ -64,9 +67,9 @@ Delete multiple files in a single request.
 
 ```python
 files = [
-    "images/banners/old_spring.jpg",
-    "images/banners/old_summer.jpg",
-    "images/banners/old_fall.jpg",
+    "banners/old_spring.jpg",
+    "banners/old_summer.jpg",
+    "banners/old_fall.jpg",
 ]
 
 # Async
@@ -86,13 +89,13 @@ Download a set of files from a single directory as a ZIP archive.
 ```python
 # Async
 zip_bytes = await client.download_selected(
-    dir="images/banners",
+    dir="banners",
     files=["spring.jpg", "summer.jpg"],
 )
 
 # Sync
 zip_bytes = client.download_selected(
-    dir="images/banners",
+    dir="banners",
     files=["spring.jpg", "summer.jpg"],
 )
 
@@ -101,20 +104,24 @@ with open("selected.zip", "wb") as f:
 ```
 
 > [!NOTE]
-> `download_selected` takes bare filenames (e.g., `"spring.jpg"`), not full
+> `download_selected` takes bare filenames (e.g., `"spring.jpg"`), not
 > relative paths. This is different from `copy`, `move`, and `bulk_delete`,
-> which all use full paths from the KCFinder root.
+> which take paths that include the directory (e.g., `"banners/spring.jpg"`).
 
 ## Error Handling
+
+Bulk operations return error details for individual files that failed. These
+are joined into a single error message.
 
 ```python
 from kcfinder_client import ActionError, PermissionDeniedError
 
 try:
-    await client.bulk_delete(["images/protected/logo.png"])
+    await client.bulk_delete(["protected/logo.png"])
 except PermissionDeniedError as e:
     print(f"Permission denied: {e.message}")
 except ActionError as e:
+    # Bulk errors may contain multiple messages joined by "; "
     print(f"Bulk action failed ({e.action}): {e.message}")
 ```
 

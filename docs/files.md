@@ -16,9 +16,11 @@ All file operations are available on both `AsyncKCFinderClient` (async) and
 `KCFinderClient` (sync). The examples below show async usage first, with the
 sync equivalent immediately after.
 
-Directories in KCFinder are relative to the configured `uploadDir`. For
-example, if `uploadDir` is `files/` and you want to work in
-`files/images/banners/`, the `dir` argument is `"images/banners"`.
+Directory paths are relative to the file type root (e.g., `images/`). For
+example, to work with `images/banners/`, the `dir` argument is `"banners"`.
+The type prefix is added internally by the client. An empty string `""` (or
+omitting the argument where optional) refers to the root of the type
+directory.
 
 ## list_files
 
@@ -26,10 +28,12 @@ List all files in a directory. Returns a list of `FileInfo` objects.
 
 ```python
 # Async
-files = await client.list_files("images/banners")
+files = await client.list_files("banners")
+files = await client.list_files()  # root
 
 # Sync
-files = client.list_files("images/banners")
+files = client.list_files("banners")
+files = client.list_files()  # root
 
 for f in files:
     print(f.name)         # "banner_2024.jpg"
@@ -37,6 +41,8 @@ for f in files:
     print(f.mtime)        # datetime(2024, 3, 15, 10, 30, tzinfo=timezone.utc)
     print(f.is_writable)  # True
 ```
+
+The `dir` parameter defaults to `""` (root).
 
 ### FileInfo Fields
 
@@ -60,16 +66,16 @@ Upload one file or a list of files to a directory.
 from pathlib import Path
 
 # Upload a single file
-await client.upload("images/banners", Path("./banner_spring.jpg"))
-client.upload("images/banners", Path("./banner_spring.jpg"))
+await client.upload("banners", Path("./banner_spring.jpg"))
+client.upload("banners", Path("./banner_spring.jpg"))
 
 # Upload multiple files at once
-await client.upload("images/banners", [
+await client.upload("banners", [
     Path("./banner_spring.jpg"),
     Path("./banner_summer.jpg"),
     Path("./banner_fall.jpg"),
 ])
-client.upload("images/banners", [
+client.upload("banners", [
     Path("./banner_spring.jpg"),
     Path("./banner_summer.jpg"),
     Path("./banner_fall.jpg"),
@@ -84,10 +90,10 @@ Download a file and return its content as bytes.
 
 ```python
 # Async
-content = await client.download("images/banners", "banner_spring.jpg")
+content = await client.download("banners", "banner_spring.jpg")
 
 # Sync
-content = client.download("images/banners", "banner_spring.jpg")
+content = client.download("banners", "banner_spring.jpg")
 
 # Save to disk
 with open("downloaded.jpg", "wb") as f:
@@ -100,10 +106,10 @@ Delete a file.
 
 ```python
 # Async
-await client.delete("images/banners", "old_banner.jpg")
+await client.delete("banners", "old_banner.jpg")
 
 # Sync
-client.delete("images/banners", "old_banner.jpg")
+client.delete("banners", "old_banner.jpg")
 ```
 
 Returns `None` on success. Raises `FileOperationError` if the file does not
@@ -115,10 +121,10 @@ Rename a file in place (cannot move to another directory).
 
 ```python
 # Async
-await client.rename("images/banners", "banner_v1.jpg", "banner_v2.jpg")
+await client.rename("banners", "banner_v1.jpg", "banner_v2.jpg")
 
 # Sync
-client.rename("images/banners", "banner_v1.jpg", "banner_v2.jpg")
+client.rename("banners", "banner_v1.jpg", "banner_v2.jpg")
 ```
 
 | Parameter  | Description                        |
@@ -133,10 +139,10 @@ Retrieve the KCFinder-generated thumbnail for an image as PNG bytes.
 
 ```python
 # Async
-thumb = await client.get_thumbnail("images/banners", "banner_spring.jpg")
+thumb = await client.get_thumbnail("banners", "banner_spring.jpg")
 
 # Sync
-thumb = client.get_thumbnail("images/banners", "banner_spring.jpg")
+thumb = client.get_thumbnail("banners", "banner_spring.jpg")
 
 # Save thumbnail to disk
 with open("thumb.png", "wb") as f:
@@ -152,7 +158,7 @@ are always PNG.
 from kcfinder_client import FileOperationError, UploadError, PermissionDeniedError
 
 try:
-    await client.delete("images/banners", "protected.jpg")
+    await client.delete("banners", "protected.jpg")
 except PermissionDeniedError as e:
     print(f"No permission: {e.message}")
 except FileOperationError as e:

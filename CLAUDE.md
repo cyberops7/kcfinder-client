@@ -35,6 +35,35 @@ inv scan       # Security scan (bandit + pip-audit)
 inv build      # Build package with uv
 ```
 
+### Live Testing
+
+Atomic live tests for every client method against a real KCFinder server.
+Requires env vars (see `live.py` for details). Credentials are loaded via
+`python-dotenv` from a `.env` file.
+
+```bash
+inv live.auth          # Authenticate, confirm session
+inv live.list          # List files in root (--dir for subdirs)
+inv live.tree          # Root directory node with immediate subdirs
+inv live.expand        # List subdirectories (--dir for subdirs)
+inv live.upload        # Upload a test JPEG
+inv live.download      # Upload, download, verify bytes match
+inv live.thumb         # Upload image, get thumbnail
+inv live.rename        # Upload, rename, verify
+inv live.delete        # Upload, delete, verify gone
+inv live.mkdir         # Create test directory
+inv live.list-dir      # Create dir with file, list contents
+inv live.rename-dir    # Create dir, rename, verify
+inv live.delete-dir    # Create dir, delete, verify gone
+inv live.copy          # Upload, copy to dest dir
+inv live.move          # Upload, move to dest dir
+inv live.bulk-delete   # Upload 2 files, bulk delete
+inv live.download-dir  # Download dir as ZIP
+inv live.download-sel  # Download selected files as ZIP
+inv live.cleanup       # Remove all _test_* artifacts
+inv live.all           # Run all tests in order
+```
+
 ## Package Structure
 
 ```text
@@ -47,6 +76,9 @@ src/kcfinder_client/
 ├── models.py            # FileInfo, DirTree, SyncResult dataclasses
 ├── exceptions.py        # KCFinderError hierarchy
 └── sync.py              # SyncManager, SyncManagerSync (one-way push)
+
+live.py                  # Live test tasks (inv live.*)
+tasks.py                 # Invoke task definitions + live namespace registration
 ```
 
 ## Architecture
@@ -69,18 +101,29 @@ All operations POST to `browse.php?act=<action>` with form data (`dir`,
 - **Session-based auth**: `PHPSESSID` cookie from login step
 - **Required headers**: `Referer` (full browse URL) and
   `X-Requested-With: XMLHttpRequest`
+- **Auth query params**: HarmonySite's fork requires `bros_config` and
+  `brosseccheck` as query params on every request, not just the session init.
+  This is handled by `BaseAuth.get_query_params()`.
+- **Dir param type prefix**: All `dir` params must include the file type
+  prefix (e.g., `images/subfolder`). The client handles this internally via
+  `prefix_dir()` — callers pass bare paths like `"subfolder"`.
 - **Error handling**: KCFinder returns HTTP 200 even on errors — response body
-  must be inspected
+  must be inspected. Success is `{}` for mutating actions, JSON for queries.
+  Bulk action errors are arrays joined with `"; "`.
+- **Thumbnail via GET**: `act=thumb` uses GET query params (dir, file), not
+  POST form data.
 - **File scoping**: The `type=images` param scopes to `images/` under
   `uploadDir` — this is the filesystem ceiling
 
 ### Auth Strategy Pattern
 
 Auth is pluggable via `BaseAuth` subclasses. Each strategy implements
-`authenticate(session)`, `authenticate_sync(session)`, and `get_referer()`.
+`authenticate(session)`, `authenticate_sync(session)`, `get_referer()`, and
+optionally `get_query_params()`.
 
 - **`HarmonySiteAuth`**: Logs in via `dbaction.php`, then initializes KCFinder
-  session with `bros_config`/`brosseccheck` query params
+  session with `bros_config`/`brosseccheck` query params. These params are
+  also sent on every subsequent request via `get_query_params()`.
 - **`SessionAuth`**: For standard KCFinder installs where the session is
   pre-established
 - **`harmonysite_auth_from_env()`**: Factory that reads credentials from

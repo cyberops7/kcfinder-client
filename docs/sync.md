@@ -27,15 +27,17 @@ Two classes are available:
 
 ```python
 import asyncio
+import os
 from pathlib import Path
 from kcfinder_client import AsyncKCFinderClient, SyncManager, harmonysite_auth_from_env
 
 async def main():
     auth = harmonysite_auth_from_env()
-    async with AsyncKCFinderClient(auth.get_referer(), auth) as client:
+    browse_url = os.environ["KCFINDER_BROWSE_URL"]
+    async with AsyncKCFinderClient(browse_url, auth) as client:
         sync = SyncManager(client)
         result = await sync.push(
-            remote_dir="images/banners",
+            remote_dir="banners",
             local_dir=Path("./banners"),
         )
         print(f"Uploaded: {result.uploaded}")
@@ -48,15 +50,17 @@ asyncio.run(main())
 ## Sync Usage
 
 ```python
+import os
 from pathlib import Path
 from kcfinder_client import KCFinderClient, SyncManagerSync, harmonysite_auth_from_env
 
 auth = harmonysite_auth_from_env()
 
-with KCFinderClient(auth.get_referer(), auth) as client:
+browse_url = os.environ["KCFINDER_BROWSE_URL"]
+with KCFinderClient(browse_url, auth) as client:
     sync = SyncManagerSync(client)
     result = sync.push(
-        remote_dir="images/banners",
+        remote_dir="banners",
         local_dir=Path("./banners"),
     )
     print(f"Uploaded: {result.uploaded}")
@@ -72,10 +76,10 @@ it.
 
 ```python
 # Async dry run
-result = await sync.push("images/banners", Path("./banners"), dry_run=True)
+result = await sync.push("banners", Path("./banners"), dry_run=True)
 
 # Sync dry run
-result = sync.push("images/banners", Path("./banners"), dry_run=True)
+result = sync.push("banners", Path("./banners"), dry_run=True)
 
 print("Changes that would be made:")
 for name in result.uploaded:
@@ -116,12 +120,10 @@ subdirectory:
 
 ```python
 base_local = Path("./images")
-base_remote = "images"
-
 dirs = ["banners", "events", "headshots"]
 
 for d in dirs:
-    result = await sync.push(f"{base_remote}/{d}", base_local / d)
+    result = await sync.push(d, base_local / d)
     print(f"{d}: +{len(result.uploaded)} -{len(result.deleted)} ={len(result.skipped)}")
 ```
 
