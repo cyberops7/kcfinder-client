@@ -67,9 +67,7 @@ def _get_client():
 
 def _make_test_jpeg() -> Path:
     """Write a minimal JPEG to a temp file and return the path."""
-    f = tempfile.NamedTemporaryFile(
-        prefix=TEST_PREFIX, suffix=".jpg", delete=False
-    )
+    f = tempfile.NamedTemporaryFile(prefix=TEST_PREFIX, suffix=".jpg", delete=False)
     f.write(base64.b64decode(_JPEG_B64))
     f.close()
     return Path(f.name)
@@ -341,10 +339,12 @@ def bulk_delete(c):
         client.upload(dir_name, jpeg1)
         client.upload(dir_name, jpeg2)
         print(f"Uploaded: {jpeg1.name}, {jpeg2.name}")
-        client.bulk_delete([
-            f"{dir_name}/{jpeg1.name}",
-            f"{dir_name}/{jpeg2.name}",
-        ])
+        client.bulk_delete(
+            [
+                f"{dir_name}/{jpeg1.name}",
+                f"{dir_name}/{jpeg2.name}",
+            ]
+        )
         print("Bulk deleted both")
         files = client.list_files(dir_name)
         remaining = [f.name for f in files]
@@ -385,9 +385,7 @@ def download_sel(c):
         client.upload(dir_name, jpeg1)
         client.upload(dir_name, jpeg2)
         print(f"Uploaded: {jpeg1.name}, {jpeg2.name}")
-        zip_bytes = client.download_selected(
-            dir_name, [jpeg1.name, jpeg2.name]
-        )
+        zip_bytes = client.download_selected(dir_name, [jpeg1.name, jpeg2.name])
         print(f"Downloaded ZIP: {len(zip_bytes):,} bytes")
         valid = zip_bytes[:2] == b"PK"
         print(f"Valid ZIP: {valid}")
@@ -433,12 +431,24 @@ def cleanup(c):
 def all_(c):
     """Run all live tests in order, stopping on first failure."""
     tests = [
-        auth, list_, tree, expand,
-        mkdir, list_dir,
-        upload, download, thumb, rename, delete,
-        rename_dir, delete_dir,
-        copy, move, bulk_delete,
-        download_dir, download_sel,
+        auth,
+        list_,
+        tree,
+        expand,
+        mkdir,
+        list_dir,
+        upload,
+        download,
+        thumb,
+        rename,
+        delete,
+        rename_dir,
+        delete_dir,
+        copy,
+        move,
+        bulk_delete,
+        download_dir,
+        download_sel,
         cleanup,
     ]
     for t in tests:
