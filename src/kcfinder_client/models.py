@@ -14,7 +14,11 @@ class FileInfo:
 
 @dataclass
 class DirTree:
-    """A directory tree node from KCFinder's init or expand actions."""
+    """A directory node from KCFinder's init or expand actions.
+
+    The server returns only one level of subdirectories at a time.
+    Use ``expand()`` to load deeper levels on demand.
+    """
 
     name: str
     is_writable: bool

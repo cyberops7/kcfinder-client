@@ -96,11 +96,11 @@ def auth(c):
 # ---------------------------------------------------------------------------
 
 
-@task(name="list")
-def list_(c):
-    """List files in the root directory."""
+@task(name="list", optional=["dir"])
+def list_(c, dir=""):
+    """List files in a directory (root by default)."""
     with _get_client() as client:
-        files = client.list_files("")
+        files = client.list_files(dir)
         print(f"Root directory: {len(files)} files")
         for f in files:
             print(f"  {f.name} ({f.size:,} bytes)")
@@ -108,7 +108,7 @@ def list_(c):
 
 @task
 def tree(c):
-    """Get the full directory tree."""
+    """Get the root directory node with immediate subdirectories."""
     with _get_client() as client:
         t = client.get_tree()
         _print_tree(t, indent=0)
@@ -125,12 +125,13 @@ def _print_tree(node, indent=0):
         print(f"{prefix}  {f.name} ({f.size:,} bytes)")
 
 
-@task
-def expand(c):
-    """Expand subdirectories of the root."""
+@task(optional=["dir"])
+def expand(c, dir=""):
+    """List subdirectories of a directory (root by default)."""
     with _get_client() as client:
-        dirs = client.expand("")
-        print(f"Root subdirectories: {len(dirs)}")
+        dirs = client.expand(dir)
+        label = dir if dir else "Root"
+        print(f"{label} subdirectories: {len(dirs)}")
         for d in dirs:
             subdirs = " (has subdirs)" if d.has_subdirs else ""
             writable = "w" if d.is_writable else "r"
@@ -252,10 +253,10 @@ def thumb(c):
 def rename(c):
     """Upload a file, rename it, and verify the new name."""
     dir_name = f"{TEST_PREFIX}rename"
-    new_name = f"{TEST_PREFIX}renamed.jpg"
     with _get_client() as client:
         _ensure_dir(client, dir_name)
         jpeg = _make_test_jpeg()
+        new_name = jpeg.stem + "_renamed.jpg"
         client.upload(dir_name, jpeg)
         print(f"Uploaded: {jpeg.name}")
         client.rename(dir_name, jpeg.name, new_name)
@@ -401,22 +402,31 @@ def download_sel(c):
 
 @task
 def cleanup(c):
-    """Remove all _test_* directories and their contents."""
+    """Remove all _test_* files and directories from the server."""
     with _get_client() as client:
-        dirs = client.expand("")
+        found = False
+
+        # Remove _test_* files in root
+        files = client.list_files()
+        test_files = [f.name for f in files if f.name.startswith(TEST_PREFIX)]
+        for name in test_files:
+            client.delete("", name)
+            print(f"Deleted file: {name}")
+            found = True
+
+        # Remove _test_* directories (recursive)
+        dirs = client.expand()
         test_dirs = [d.name for d in dirs if d.name.startswith(TEST_PREFIX)]
-        if not test_dirs:
-            print("No test artifacts found.")
-            return
         for name in test_dirs:
-            files = client.list_files(name)
-            for f in files:
-                client.delete(name, f.name)
             try:
                 client.delete_dir(name)
-                print(f"Deleted: {name}/")
+                print(f"Deleted dir: {name}/")
+                found = True
             except ActionError as e:
                 print(f"Could not delete {name}/: {e.message}")
+
+        if not found:
+            print("No test artifacts found.")
 
 
 @task(name="all")

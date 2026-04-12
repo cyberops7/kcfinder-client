@@ -64,8 +64,8 @@ class KCFinderClient:
         headers = build_headers(self._auth.get_referer())
         return self._get_client().post(url, data=data, headers=headers)
 
-    def list_files(self, dir: str) -> list[FileInfo]:
-        """List files in a directory."""
+    def list_files(self, dir: str = "") -> list[FileInfo]:
+        """List files in a directory (root by default)."""
         data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = self._post("chDir", data)
         return parse_file_list(response.json())
@@ -128,7 +128,7 @@ class KCFinderClient:
         return response.content
 
     def get_tree(self) -> DirTree:
-        """Get the full directory tree."""
+        """Initialize the browser view and return the root directory node."""
         url = build_action_url(
             self._browse_url, "init", self._file_type, self._auth.get_query_params()
         )
@@ -136,8 +136,8 @@ class KCFinderClient:
         response = self._get_client().post(url, headers=headers)
         return parse_dir_tree(response.json())
 
-    def expand(self, dir: str) -> list[DirTree]:
-        """Get subdirectory info for a directory."""
+    def expand(self, dir: str = "") -> list[DirTree]:
+        """Get subdirectory info for a directory (root by default)."""
         data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = self._post("expand", data)
         return parse_expand_response(response.json())
@@ -155,7 +155,11 @@ class KCFinderClient:
         check_action_error("renameDir", response.text)
 
     def delete_dir(self, dir: str) -> None:
-        """Delete a directory recursively."""
+        """Delete a directory and all its contents recursively.
+
+        Removes all files and subdirectories within the target directory
+        before removing the directory itself.
+        """
         data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = self._post("deleteDir", data)
         check_action_error("deleteDir", response.text)
@@ -181,12 +185,16 @@ class KCFinderClient:
         response = self._post(action, data)
         check_action_error(action, response.text)
 
-    def copy(self, files: list[str], dest: str) -> None:
+    def copy(self, files: str | list[str], dest: str) -> None:
         """Copy files to a destination directory."""
+        if isinstance(files, str):
+            files = [files]
         self._bulk_action("cp_cbd", files, dest)
 
-    def move(self, files: list[str], dest: str) -> None:
+    def move(self, files: str | list[str], dest: str) -> None:
         """Move files to a destination directory."""
+        if isinstance(files, str):
+            files = [files]
         self._bulk_action("mv_cbd", files, dest)
 
     def bulk_delete(self, files: list[str]) -> None:

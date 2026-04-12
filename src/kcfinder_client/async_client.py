@@ -66,8 +66,8 @@ class AsyncKCFinderClient:
         headers = build_headers(self._auth.get_referer())
         return await self._get_client().post(url, data=data, headers=headers)
 
-    async def list_files(self, dir: str) -> list[FileInfo]:
-        """List files in a directory."""
+    async def list_files(self, dir: str = "") -> list[FileInfo]:
+        """List files in a directory (root by default)."""
         data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = await self._post("chDir", data)
         return parse_file_list(response.json())
@@ -130,7 +130,7 @@ class AsyncKCFinderClient:
         return response.content
 
     async def get_tree(self) -> DirTree:
-        """Get the full directory tree."""
+        """Initialize the browser view and return the root directory node."""
         url = build_action_url(
             self._browse_url, "init", self._file_type, self._auth.get_query_params()
         )
@@ -138,8 +138,8 @@ class AsyncKCFinderClient:
         response = await self._get_client().post(url, headers=headers)
         return parse_dir_tree(response.json())
 
-    async def expand(self, dir: str) -> list[DirTree]:
-        """Get subdirectory info for a directory."""
+    async def expand(self, dir: str = "") -> list[DirTree]:
+        """Get subdirectory info for a directory (root by default)."""
         data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = await self._post("expand", data)
         return parse_expand_response(response.json())
@@ -157,7 +157,11 @@ class AsyncKCFinderClient:
         check_action_error("renameDir", response.text)
 
     async def delete_dir(self, dir: str) -> None:
-        """Delete a directory recursively."""
+        """Delete a directory and all its contents recursively.
+
+        Removes all files and subdirectories within the target directory
+        before removing the directory itself.
+        """
         data = build_form_data(dir=prefix_dir(self._file_type, dir))
         response = await self._post("deleteDir", data)
         check_action_error("deleteDir", response.text)
@@ -183,12 +187,16 @@ class AsyncKCFinderClient:
         response = await self._post(action, data)
         check_action_error(action, response.text)
 
-    async def copy(self, files: list[str], dest: str) -> None:
+    async def copy(self, files: str | list[str], dest: str) -> None:
         """Copy files to a destination directory."""
+        if isinstance(files, str):
+            files = [files]
         await self._bulk_action("cp_cbd", files, dest)
 
-    async def move(self, files: list[str], dest: str) -> None:
+    async def move(self, files: str | list[str], dest: str) -> None:
         """Move files to a destination directory."""
+        if isinstance(files, str):
+            files = [files]
         await self._bulk_action("mv_cbd", files, dest)
 
     async def bulk_delete(self, files: list[str]) -> None:
