@@ -1,7 +1,7 @@
 import pytest
 
 from kcfinder_client.async_client import AsyncKCFinderClient
-from kcfinder_client.exceptions import ActionError
+from kcfinder_client.exceptions import ActionError, UploadError
 from kcfinder_client.models import DirTree, FileInfo
 from tests.conftest import BROWSE_URL
 
@@ -10,6 +10,13 @@ from tests.conftest import BROWSE_URL
 async def test_async_client_context_manager(session_auth):
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         assert client is not None
+
+
+@pytest.mark.asyncio
+async def test_async_client_raises_outside_context_manager(session_auth):
+    client = AsyncKCFinderClient(BROWSE_URL, session_auth)
+    with pytest.raises(RuntimeError, match="context manager"):
+        await client.list_files()
 
 
 @pytest.mark.asyncio
@@ -90,6 +97,19 @@ async def test_upload_root_dir(session_auth, httpx_mock, tmp_path):
     test_file.write_bytes(b"fake image data")
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
         await client.upload("", test_file)
+
+
+@pytest.mark.asyncio
+async def test_upload_error(session_auth, httpx_mock, tmp_path):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir",
+        text="notes.txt: File type not allowed",
+    )
+    test_file = tmp_path / "notes.txt"
+    test_file.write_bytes(b"not an image")
+    async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
+        with pytest.raises(UploadError, match="File type not allowed"):
+            await client.upload("test_dir", test_file)
 
 
 @pytest.mark.asyncio

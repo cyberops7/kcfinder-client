@@ -103,6 +103,23 @@ def test_parse_file_list():
     assert files[1].is_writable is False
 
 
+def test_parse_file_list_falls_back_to_dir_writable():
+    raw = {
+        "files": [
+            {
+                "name": "photo.jpg",
+                "size": 1024,
+                "mtime": 1704067200,
+                "readable": True,
+                # no per-file "writable" key — should fall back to dirWritable
+            },
+        ],
+        "dirWritable": True,
+    }
+    files = parse_file_list(raw)
+    assert files[0].is_writable is True
+
+
 def test_parse_file_list_empty():
     raw = {"files": [], "dirWritable": True}
     files = parse_file_list(raw)
