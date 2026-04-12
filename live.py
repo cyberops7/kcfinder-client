@@ -89,3 +89,351 @@ def auth(c):
     with _get_client() as client:
         tree = client.get_tree()
         print(f"Authenticated. Root: {tree.name}")
+
+
+# ---------------------------------------------------------------------------
+# Read-only subcommands
+# ---------------------------------------------------------------------------
+
+
+@task(name="list")
+def list_(c):
+    """List files in the root directory."""
+    with _get_client() as client:
+        files = client.list_files("")
+        print(f"Root directory: {len(files)} files")
+        for f in files:
+            print(f"  {f.name} ({f.size:,} bytes)")
+
+
+@task
+def tree(c):
+    """Get the full directory tree."""
+    with _get_client() as client:
+        t = client.get_tree()
+        _print_tree(t, indent=0)
+
+
+def _print_tree(node, indent=0):
+    """Recursively print a DirTree."""
+    prefix = "  " * indent
+    writable = "w" if node.is_writable else "r"
+    print(f"{prefix}{node.name}/ [{writable}]")
+    for child in node.children:
+        _print_tree(child, indent + 1)
+    for f in node.files:
+        print(f"{prefix}  {f.name} ({f.size:,} bytes)")
+
+
+@task
+def expand(c):
+    """Expand subdirectories of the root."""
+    with _get_client() as client:
+        dirs = client.expand("")
+        print(f"Root subdirectories: {len(dirs)}")
+        for d in dirs:
+            subdirs = " (has subdirs)" if d.has_subdirs else ""
+            writable = "w" if d.is_writable else "r"
+            print(f"  {d.name}/ [{writable}]{subdirs}")
+
+
+# ---------------------------------------------------------------------------
+# Directory mutation subcommands
+# ---------------------------------------------------------------------------
+
+
+@task
+def mkdir(c):
+    """Create a test directory."""
+    name = f"{TEST_PREFIX}mkdir"
+    with _get_client() as client:
+        client.create_dir("", name)
+        print(f"Created: {name}/")
+        dirs = client.expand("")
+        found = any(d.name == name for d in dirs)
+        print(f"Visible in tree: {found}")
+
+
+@task(name="list-dir")
+def list_dir(c):
+    """Create a test directory with a file, then list its contents."""
+    name = f"{TEST_PREFIX}list"
+    with _get_client() as client:
+        _ensure_dir(client, name)
+        jpeg = _make_test_jpeg()
+        client.upload(name, jpeg)
+        jpeg.unlink()
+        files = client.list_files(name)
+        print(f"Directory {name}/: {len(files)} files")
+        for f in files:
+            print(f"  {f.name} ({f.size:,} bytes)")
+
+
+@task(name="rename-dir")
+def rename_dir(c):
+    """Create a test directory, rename it, and verify."""
+    old_name = f"{TEST_PREFIX}renamedir"
+    new_name = f"{TEST_PREFIX}renamedir_new"
+    with _get_client() as client:
+        _ensure_dir(client, old_name)
+        print(f"Created: {old_name}/")
+        client.rename_dir(old_name, new_name)
+        print(f"Renamed: {old_name}/ -> {new_name}/")
+        dirs = client.expand("")
+        found = any(d.name == new_name for d in dirs)
+        print(f"Visible as {new_name}/: {found}")
+
+
+@task(name="delete-dir")
+def delete_dir(c):
+    """Create a test directory, delete it, and verify it's gone."""
+    name = f"{TEST_PREFIX}deletedir"
+    with _get_client() as client:
+        _ensure_dir(client, name)
+        print(f"Created: {name}/")
+        client.delete_dir(name)
+        print(f"Deleted: {name}/")
+        dirs = client.expand("")
+        found = any(d.name == name for d in dirs)
+        print(f"Still visible: {found}")
+
+
+# ---------------------------------------------------------------------------
+# File mutation subcommands
+# ---------------------------------------------------------------------------
+
+
+@task
+def upload(c):
+    """Upload a test JPEG file."""
+    dir_name = f"{TEST_PREFIX}upload"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg = _make_test_jpeg()
+        client.upload(dir_name, jpeg)
+        print(f"Uploaded: {jpeg.name} -> {dir_name}/")
+        files = client.list_files(dir_name)
+        found = any(f.name == jpeg.name for f in files)
+        print(f"Visible in listing: {found}")
+        jpeg.unlink()
+
+
+@task
+def download(c):
+    """Upload a file, download it, and verify the bytes match."""
+    dir_name = f"{TEST_PREFIX}download"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg = _make_test_jpeg()
+        original_bytes = jpeg.read_bytes()
+        client.upload(dir_name, jpeg)
+        print(f"Uploaded: {jpeg.name} ({len(original_bytes)} bytes)")
+        downloaded = client.download(dir_name, jpeg.name)
+        match = downloaded == original_bytes
+        print(f"Downloaded: {len(downloaded)} bytes, match: {match}")
+        jpeg.unlink()
+
+
+@task
+def thumb(c):
+    """Upload an image, then get its thumbnail."""
+    dir_name = f"{TEST_PREFIX}thumb"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg = _make_test_jpeg()
+        client.upload(dir_name, jpeg)
+        print(f"Uploaded: {jpeg.name}")
+        data = client.get_thumbnail(dir_name, jpeg.name)
+        print(f"Thumbnail: {len(data)} bytes")
+        jpeg.unlink()
+
+
+@task
+def rename(c):
+    """Upload a file, rename it, and verify the new name."""
+    dir_name = f"{TEST_PREFIX}rename"
+    new_name = f"{TEST_PREFIX}renamed.jpg"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg = _make_test_jpeg()
+        client.upload(dir_name, jpeg)
+        print(f"Uploaded: {jpeg.name}")
+        client.rename(dir_name, jpeg.name, new_name)
+        print(f"Renamed: {jpeg.name} -> {new_name}")
+        files = client.list_files(dir_name)
+        found = any(f.name == new_name for f in files)
+        print(f"Visible as {new_name}: {found}")
+        jpeg.unlink()
+
+
+@task
+def delete(c):
+    """Upload a file, delete it, and verify it's gone."""
+    dir_name = f"{TEST_PREFIX}delete"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg = _make_test_jpeg()
+        client.upload(dir_name, jpeg)
+        print(f"Uploaded: {jpeg.name}")
+        client.delete(dir_name, jpeg.name)
+        print(f"Deleted: {jpeg.name}")
+        files = client.list_files(dir_name)
+        found = any(f.name == jpeg.name for f in files)
+        print(f"Still visible: {found}")
+        jpeg.unlink()
+
+
+# ---------------------------------------------------------------------------
+# Bulk operation subcommands
+# ---------------------------------------------------------------------------
+
+
+@task
+def copy(c):
+    """Upload a file, copy it to another directory, and verify."""
+    src_dir = f"{TEST_PREFIX}copy"
+    dest_dir = f"{TEST_PREFIX}copy_dest"
+    with _get_client() as client:
+        _ensure_dir(client, src_dir)
+        _ensure_dir(client, dest_dir)
+        jpeg = _make_test_jpeg()
+        client.upload(src_dir, jpeg)
+        print(f"Uploaded: {jpeg.name} -> {src_dir}/")
+        client.copy([f"{src_dir}/{jpeg.name}"], dest=dest_dir)
+        print(f"Copied to: {dest_dir}/")
+        files = client.list_files(dest_dir)
+        found = any(f.name == jpeg.name for f in files)
+        print(f"Visible in {dest_dir}/: {found}")
+        jpeg.unlink()
+
+
+@task
+def move(c):
+    """Upload a file, move it to another directory, and verify."""
+    src_dir = f"{TEST_PREFIX}move"
+    dest_dir = f"{TEST_PREFIX}move_dest"
+    with _get_client() as client:
+        _ensure_dir(client, src_dir)
+        _ensure_dir(client, dest_dir)
+        jpeg = _make_test_jpeg()
+        client.upload(src_dir, jpeg)
+        print(f"Uploaded: {jpeg.name} -> {src_dir}/")
+        client.move([f"{src_dir}/{jpeg.name}"], dest=dest_dir)
+        print(f"Moved to: {dest_dir}/")
+        src_files = client.list_files(src_dir)
+        gone = not any(f.name == jpeg.name for f in src_files)
+        print(f"Gone from {src_dir}/: {gone}")
+        dest_files = client.list_files(dest_dir)
+        arrived = any(f.name == jpeg.name for f in dest_files)
+        print(f"Visible in {dest_dir}/: {arrived}")
+        jpeg.unlink()
+
+
+@task(name="bulk-delete")
+def bulk_delete(c):
+    """Upload two files, bulk delete both, and verify they're gone."""
+    dir_name = f"{TEST_PREFIX}bulkdel"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg1 = _make_test_jpeg()
+        jpeg2 = _make_test_jpeg()
+        client.upload(dir_name, jpeg1)
+        client.upload(dir_name, jpeg2)
+        print(f"Uploaded: {jpeg1.name}, {jpeg2.name}")
+        client.bulk_delete([
+            f"{dir_name}/{jpeg1.name}",
+            f"{dir_name}/{jpeg2.name}",
+        ])
+        print("Bulk deleted both")
+        files = client.list_files(dir_name)
+        remaining = [f.name for f in files]
+        print(f"Remaining in {dir_name}/: {remaining}")
+        jpeg1.unlink()
+        jpeg2.unlink()
+
+
+# ---------------------------------------------------------------------------
+# Download archive subcommands
+# ---------------------------------------------------------------------------
+
+
+@task(name="download-dir")
+def download_dir(c):
+    """Create a test directory with a file, download it as ZIP."""
+    dir_name = f"{TEST_PREFIX}dldir"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg = _make_test_jpeg()
+        client.upload(dir_name, jpeg)
+        print(f"Uploaded: {jpeg.name} -> {dir_name}/")
+        zip_bytes = client.download_dir(dir_name)
+        print(f"Downloaded ZIP: {len(zip_bytes):,} bytes")
+        valid = zip_bytes[:2] == b"PK"
+        print(f"Valid ZIP: {valid}")
+        jpeg.unlink()
+
+
+@task(name="download-sel")
+def download_sel(c):
+    """Upload files, download a selection as ZIP."""
+    dir_name = f"{TEST_PREFIX}dlsel"
+    with _get_client() as client:
+        _ensure_dir(client, dir_name)
+        jpeg1 = _make_test_jpeg()
+        jpeg2 = _make_test_jpeg()
+        client.upload(dir_name, jpeg1)
+        client.upload(dir_name, jpeg2)
+        print(f"Uploaded: {jpeg1.name}, {jpeg2.name}")
+        zip_bytes = client.download_selected(
+            dir_name, [jpeg1.name, jpeg2.name]
+        )
+        print(f"Downloaded ZIP: {len(zip_bytes):,} bytes")
+        valid = zip_bytes[:2] == b"PK"
+        print(f"Valid ZIP: {valid}")
+        jpeg1.unlink()
+        jpeg2.unlink()
+
+
+# ---------------------------------------------------------------------------
+# Meta subcommands
+# ---------------------------------------------------------------------------
+
+
+@task
+def cleanup(c):
+    """Remove all _test_* directories and their contents."""
+    with _get_client() as client:
+        dirs = client.expand("")
+        test_dirs = [d.name for d in dirs if d.name.startswith(TEST_PREFIX)]
+        if not test_dirs:
+            print("No test artifacts found.")
+            return
+        for name in test_dirs:
+            files = client.list_files(name)
+            for f in files:
+                client.delete(name, f.name)
+            try:
+                client.delete_dir(name)
+                print(f"Deleted: {name}/")
+            except ActionError as e:
+                print(f"Could not delete {name}/: {e.message}")
+
+
+@task(name="all")
+def all_(c):
+    """Run all live tests in order, stopping on first failure."""
+    tests = [
+        auth, list_, tree, expand,
+        mkdir, list_dir,
+        upload, download, thumb, rename, delete,
+        rename_dir, delete_dir,
+        copy, move, bulk_delete,
+        download_dir, download_sel,
+        cleanup,
+    ]
+    for t in tests:
+        name = t.__name__.rstrip("_").replace("_", "-")
+        print(f"\n{'=' * 60}")
+        print(f"inv live.{name}")
+        print("=" * 60)
+        t(c)
