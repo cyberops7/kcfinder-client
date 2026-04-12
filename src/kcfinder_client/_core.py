@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
-from kcfinder_client.exceptions import ActionError, UploadError
+from kcfinder_client.exceptions import classify_error
 from kcfinder_client.models import DirTree, FileInfo
 
 
@@ -124,7 +124,7 @@ def check_upload_response(response_text: str) -> None:
         line = line.strip()
         if not line or line.startswith("/"):
             continue  # success — uploaded filename
-        raise UploadError(action="upload", message=line)
+        raise classify_error(action="upload", message=line)
 
 
 def check_action_error(action: str, response_body: str | dict) -> None:
@@ -140,7 +140,7 @@ def check_action_error(action: str, response_body: str | dict) -> None:
         if "error" in response_body:
             err = response_body["error"]
             msg = "; ".join(err) if isinstance(err, list) else str(err)
-            raise ActionError(action=action, message=msg)
+            raise classify_error(action=action, message=msg)
         return  # empty dict or success dict without "error" key
     if isinstance(response_body, str):
         stripped = response_body.strip()
@@ -152,11 +152,11 @@ def check_action_error(action: str, response_body: str | dict) -> None:
             if isinstance(parsed, dict) and "error" in parsed:
                 err = parsed["error"]
                 msg = "; ".join(err) if isinstance(err, list) else str(err)
-                raise ActionError(action=action, message=msg)
+                raise classify_error(action=action, message=msg)
             return  # valid JSON without "error" key
         except json.JSONDecodeError:
             pass
-        raise ActionError(action=action, message=stripped)
+        raise classify_error(action=action, message=stripped)
 
 
 def parse_expand_response(raw: dict) -> list[DirTree]:

@@ -24,7 +24,7 @@ def main() -> None:
         # List files in the root directory
         files = client.list_files()
         for f in files:
-            print(f"{f.name}  {f.size} bytes  {f.timestamp}")
+            print(f"{f.name}  {f.size} bytes  {f.mtime}")
 
         # List files in a subdirectory
         files = client.list_files("photos")

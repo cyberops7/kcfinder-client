@@ -103,12 +103,12 @@ async def test_upload_root_dir(session_auth, httpx_mock, tmp_path):
 async def test_upload_error(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir",
-        text="notes.txt: File type not allowed",
+        text="The uploaded file was only partially uploaded.",
     )
     test_file = tmp_path / "notes.txt"
     test_file.write_bytes(b"not an image")
     async with AsyncKCFinderClient(BROWSE_URL, session_auth) as client:
-        with pytest.raises(UploadError, match="File type not allowed"):
+        with pytest.raises(UploadError, match="partially uploaded"):
             await client.upload("test_dir", test_file)
 
 

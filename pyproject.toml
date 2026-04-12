@@ -23,6 +23,10 @@ packages = ["src/kcfinder_client"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
+[tool.pyrefly]
+search_path = ["."]
+project_excludes = ["tasks.py", "live.py"]
+
 [tool.ruff]
 src = ["src", "tests"]
 line-length = 88
