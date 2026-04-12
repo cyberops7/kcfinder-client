@@ -1,4 +1,6 @@
-from invoke import task
+from invoke import Collection, task
+
+import live
 
 
 @task
@@ -58,3 +60,15 @@ def scan(c):
 def build(c):
     """Build the package."""
     c.run("uv build", pty=True)
+
+
+ns = Collection()
+ns.add_task(test)
+ns.add_task(lint)
+ns.add_task(format)
+ns.add_task(tc)
+ns.add_task(mdlint)
+ns.add_task(check)
+ns.add_task(scan)
+ns.add_task(build)
+ns.add_collection(Collection.from_module(live))
