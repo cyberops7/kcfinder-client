@@ -53,8 +53,28 @@ BROS_CONFIG = (
 )
 
 
+def test_session_auth_get_query_params():
+    auth = SessionAuth(
+        session_id="abc123", referer="https://example.com/kcfinder/browse.php"
+    )
+    assert auth.get_query_params() == {}
+
+
 def test_harmonysite_auth_is_base_auth_subclass():
     assert issubclass(HarmonySiteAuth, BaseAuth)
+
+
+def test_harmonysite_auth_get_query_params():
+    auth = HarmonySiteAuth(
+        login_url="https://example.com/dbaction.php",
+        browse_url="https://example.com/kcfinder/browse.php",
+        username="user",
+        password="pass",
+        bros_config=BROS_CONFIG,
+        brosseccheck="Xx-ok-xX",
+    )
+    params = auth.get_query_params()
+    assert params == {"bros_config": BROS_CONFIG, "brosseccheck": "Xx-ok-xX"}
 
 
 def test_harmonysite_auth_get_referer():
@@ -113,6 +133,21 @@ async def test_harmonysite_auth_success(httpx_mock):
     )
     async with httpx.AsyncClient() as client:
         await auth.authenticate(client)
+    # If we get here without AuthError, auth succeeded
+
+
+def test_harmonysite_auth_success_sync(httpx_mock):
+    httpx_mock.add_response(url="https://example.com/dbaction.php", status_code=200)
+    httpx_mock.add_response(status_code=200)  # Matches browse.php GET with query params
+    auth = HarmonySiteAuth(
+        login_url="https://example.com/dbaction.php",
+        browse_url="https://example.com/kcfinder/browse.php",
+        username="user",
+        password="pass",
+        bros_config=BROS_CONFIG,
+    )
+    with httpx.Client() as client:
+        auth.authenticate_sync(client)
     # If we get here without AuthError, auth succeeded
 
 

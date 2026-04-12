@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
-from kcfinder_client.exceptions import ActionError
+from kcfinder_client.exceptions import ActionError, UploadError
 from kcfinder_client.models import DirTree, FileInfo
 
 
@@ -77,8 +77,8 @@ def build_form_data(
 
 
 def parse_file_list(raw: dict) -> list[FileInfo]:
-    """Parse the response from a chDir action into FileInfo objects."""
-    writable = raw.get("writable", False)
+    """Parse a file list from a KCFinder response into FileInfo objects."""
+    writable = raw.get("dirWritable", False)
     return [
         FileInfo(
             name=f["name"],
@@ -124,7 +124,7 @@ def check_upload_response(response_text: str) -> None:
         line = line.strip()
         if not line or line.startswith("/"):
             continue  # success — uploaded filename
-        raise ActionError(action="upload", message=line)
+        raise UploadError(action="upload", message=line)
 
 
 def check_action_error(action: str, response_body: str | dict) -> None:

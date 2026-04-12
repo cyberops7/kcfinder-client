@@ -1,7 +1,7 @@
 import pytest
 
 from kcfinder_client.client import KCFinderClient
-from kcfinder_client.exceptions import ActionError
+from kcfinder_client.exceptions import ActionError, UploadError
 from kcfinder_client.models import DirTree, FileInfo
 from tests.conftest import BROWSE_URL
 
@@ -9,6 +9,12 @@ from tests.conftest import BROWSE_URL
 def test_sync_client_context_manager(session_auth):
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         assert client is not None
+
+
+def test_sync_client_raises_outside_context_manager(session_auth):
+    client = KCFinderClient(BROWSE_URL, session_auth)
+    with pytest.raises(RuntimeError, match="context manager"):
+        client.list_files()
 
 
 def test_list_files(session_auth, httpx_mock):
@@ -41,6 +47,18 @@ def test_upload(session_auth, httpx_mock, tmp_path):
     test_file.write_bytes(b"fake image data")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.upload("test_dir", test_file)
+
+
+def test_upload_error(session_auth, httpx_mock, tmp_path):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir",
+        text="notes.txt: File type not allowed",
+    )
+    test_file = tmp_path / "notes.txt"
+    test_file.write_bytes(b"not an image")
+    with KCFinderClient(BROWSE_URL, session_auth) as client:
+        with pytest.raises(UploadError, match="File type not allowed"):
+            client.upload("test_dir", test_file)
 
 
 def test_delete(session_auth, httpx_mock):
@@ -164,6 +182,16 @@ def test_bulk_delete(session_auth, httpx_mock):
     httpx_mock.add_response(url=f"{BROWSE_URL}?act=rm_cbd&type=images", text="{}")
     with KCFinderClient(BROWSE_URL, session_auth) as client:
         client.bulk_delete(["dir/a.jpg", "dir/b.jpg"])
+
+
+def test_bulk_delete_error(session_auth, httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=rm_cbd&type=images",
+        json={"error": ["Cannot delete 'a.jpg'", "Cannot delete 'b.jpg'"]},
+    )
+    with KCFinderClient(BROWSE_URL, session_auth) as client:
+        with pytest.raises(ActionError, match="Cannot delete 'a.jpg'"):
+            client.bulk_delete(["dir/a.jpg", "dir/b.jpg"])
 
 
 def test_download_selected(session_auth, httpx_mock):

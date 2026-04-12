@@ -177,6 +177,66 @@ def test_push_sync_uploads_new_files(session_auth, httpx_mock, tmp_path):
     assert result.skipped == []
 
 
+def test_push_sync_deletes_remote_only_files(session_auth, httpx_mock, tmp_path):
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=chDir&type=images",
+        json={
+            "files": [
+                {
+                    "name": "old.jpg",
+                    "size": 100,
+                    "mtime": 1704067200,
+                    "readable": True,
+                    "writable": True,
+                },
+            ],
+            "dirWritable": True,
+        },
+    )
+    httpx_mock.add_response(url=f"{BROWSE_URL}?act=delete&type=images", text="{}")
+
+    local_dir = tmp_path / "images"
+    local_dir.mkdir()
+
+    with KCFinderClient(BROWSE_URL, session_auth) as client:
+        manager = SyncManagerSync(client)
+        result = manager.push("remote_dir", local_dir)
+
+    assert result.uploaded == []
+    assert result.deleted == ["old.jpg"]
+    assert result.skipped == []
+
+
+def test_push_sync_skips_matching_files(session_auth, httpx_mock, tmp_path):
+    local_dir = tmp_path / "images"
+    local_dir.mkdir()
+    (local_dir / "same.jpg").write_bytes(b"x" * 512)
+
+    httpx_mock.add_response(
+        url=f"{BROWSE_URL}?act=chDir&type=images",
+        json={
+            "files": [
+                {
+                    "name": "same.jpg",
+                    "size": 512,
+                    "mtime": 1704067200,
+                    "readable": True,
+                    "writable": True,
+                },
+            ],
+            "dirWritable": True,
+        },
+    )
+
+    with KCFinderClient(BROWSE_URL, session_auth) as client:
+        manager = SyncManagerSync(client)
+        result = manager.push("remote_dir", local_dir)
+
+    assert result.uploaded == []
+    assert result.deleted == []
+    assert result.skipped == ["same.jpg"]
+
+
 def test_push_sync_dry_run(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=chDir&type=images",
