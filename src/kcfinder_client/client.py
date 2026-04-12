@@ -58,7 +58,9 @@ class KCFinderClient:
 
     def _post(self, action: str, data: dict) -> httpx.Response:
         """Send a POST request to KCFinder."""
-        url = build_action_url(self._browse_url, action, self._file_type)
+        url = build_action_url(
+            self._browse_url, action, self._file_type, self._auth.get_query_params()
+        )
         headers = build_headers(self._auth.get_referer())
         return self._get_client().post(url, data=data, headers=headers)
 
@@ -72,7 +74,9 @@ class KCFinderClient:
         """Upload one or more files to a directory."""
         if isinstance(files, Path):
             files = [files]
-        url = build_action_url(self._browse_url, "upload", self._file_type)
+        url = build_action_url(
+            self._browse_url, "upload", self._file_type, self._auth.get_query_params()
+        )
         url += "&" + urlencode({"dir": prefix_dir(self._file_type, dir)})
         headers = build_headers(self._auth.get_referer())
         upload_files = [("upload[]", (f.name, f.read_bytes())) for f in files]
@@ -112,6 +116,7 @@ class KCFinderClient:
         in the browser UI), not POST form data.
         """
         params = {
+            **self._auth.get_query_params(),
             "act": "thumb",
             "type": self._file_type,
             "dir": prefix_dir(self._file_type, dir),
@@ -124,7 +129,9 @@ class KCFinderClient:
 
     def get_tree(self) -> DirTree:
         """Get the full directory tree."""
-        url = build_action_url(self._browse_url, "init", self._file_type)
+        url = build_action_url(
+            self._browse_url, "init", self._file_type, self._auth.get_query_params()
+        )
         headers = build_headers(self._auth.get_referer())
         response = self._get_client().post(url, headers=headers)
         return parse_dir_tree(response.json())

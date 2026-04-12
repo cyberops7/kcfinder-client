@@ -22,6 +22,15 @@ class BaseAuth(ABC):
     def get_referer(self) -> str:
         """Return the Referer URL required for KCFinder requests."""
 
+    def get_query_params(self) -> dict[str, str]:
+        """Return extra query params to include on every KCFinder request.
+
+        The HarmonySite fork requires ``bros_config`` and ``brosseccheck``
+        on every request URL, not just the session init.  Standard KCFinder
+        installs return an empty dict.
+        """
+        return {}
+
 
 class SessionAuth(BaseAuth):
     """Auth for standard KCFinder installs with a pre-established session.
@@ -111,6 +120,12 @@ class HarmonySiteAuth(BaseAuth):
 
     def get_referer(self) -> str:
         return self._init_url()
+
+    def get_query_params(self) -> dict[str, str]:
+        return {
+            "bros_config": self._bros_config,
+            "brosseccheck": self._brosseccheck,
+        }
 
     def _init_url(self) -> str:
         params = urlencode(

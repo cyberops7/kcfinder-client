@@ -29,9 +29,17 @@ def prefix_file_paths(file_type: str, paths: list[str]) -> list[str]:
     return [f"{file_type}/{p}" for p in paths]
 
 
-def build_action_url(browse_url: str, action: str, file_type: str | None) -> str:
+def build_action_url(
+    browse_url: str,
+    action: str,
+    file_type: str | None,
+    extra_params: dict[str, str] | None = None,
+) -> str:
     """Build the full URL for a KCFinder action."""
-    params: dict[str, str] = {"act": action}
+    params: dict[str, str] = {}
+    if extra_params:
+        params.update(extra_params)
+    params["act"] = action
     if file_type is not None:
         params["type"] = file_type
     return f"{browse_url}?{urlencode(params)}"
