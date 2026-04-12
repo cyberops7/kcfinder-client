@@ -21,7 +21,7 @@ from kcfinder_client import ActionError, AsyncKCFinderClient, harmonysite_auth_f
 
 
 async def main() -> None:
-    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+    load_dotenv()
     auth = harmonysite_auth_from_env()
     browse_url = os.environ["KCFINDER_BROWSE_URL"]
 
