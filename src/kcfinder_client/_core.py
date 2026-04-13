@@ -142,6 +142,11 @@ def check_action_error(action: str, response_body: str | dict) -> None:
             msg = "; ".join(err) if isinstance(err, list) else str(err)
             raise classify_error(action=action, message=msg)
         return  # empty dict or success dict without "error" key
+    if not isinstance(response_body, str):
+        raise classify_error(
+            action=action,
+            message=f"unexpected response type: {type(response_body).__name__}",
+        )
     if isinstance(response_body, str):
         stripped = response_body.strip()
         if stripped == "" or stripped == "{}":
@@ -149,11 +154,16 @@ def check_action_error(action: str, response_body: str | dict) -> None:
         # Try to parse as JSON — some actions return JSON error strings
         try:
             parsed = json.loads(stripped)
-            if isinstance(parsed, dict) and "error" in parsed:
-                err = parsed["error"]
-                msg = "; ".join(err) if isinstance(err, list) else str(err)
-                raise classify_error(action=action, message=msg)
-            return  # valid JSON without "error" key
+            if isinstance(parsed, dict):
+                if "error" in parsed:
+                    err = parsed["error"]
+                    msg = "; ".join(err) if isinstance(err, list) else str(err)
+                    raise classify_error(action=action, message=msg)
+                return  # valid JSON dict without "error" key
+            raise classify_error(
+                action=action,
+                message=f"unexpected response type: {type(parsed).__name__}",
+            )
         except json.JSONDecodeError:
             pass
         raise classify_error(action=action, message=stripped)

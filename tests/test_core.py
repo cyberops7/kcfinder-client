@@ -151,6 +151,31 @@ def test_check_action_error_with_error_list():
         )
 
 
+def test_check_action_error_rejects_json_array():
+    with pytest.raises(ActionError, match="unexpected response"):
+        check_action_error("test", '["unexpected", "array"]')
+
+
+def test_check_action_error_rejects_json_null():
+    with pytest.raises(ActionError, match="unexpected response"):
+        check_action_error("test", "null")
+
+
+def test_check_action_error_rejects_json_number():
+    with pytest.raises(ActionError, match="unexpected response"):
+        check_action_error("test", "42")
+
+
+def test_check_action_error_rejects_json_string():
+    with pytest.raises(ActionError, match="unexpected response"):
+        check_action_error("test", '"bare string"')
+
+
+def test_check_action_error_rejects_non_dict_object():
+    with pytest.raises(ActionError, match="unexpected response"):
+        check_action_error("test", ["unexpected", "list"])
+
+
 def test_parse_dir_tree():
     raw = {
         "tree": {
