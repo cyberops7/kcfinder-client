@@ -81,8 +81,10 @@ class AsyncKCFinderClient:
         )
         url += "&" + urlencode({"dir": prefix_dir(self._file_type, dir)})
         headers = build_headers(self._auth.get_referer())
-        file_handles = [f.open("rb") for f in files]
+        file_handles = []
         try:
+            for f in files:
+                file_handles.append(f.open("rb"))
             upload_files = [
                 ("upload[]", (f.name, fh)) for f, fh in zip(files, file_handles)
             ]
