@@ -81,13 +81,20 @@ class AsyncKCFinderClient:
         )
         url += "&" + urlencode({"dir": prefix_dir(self._file_type, dir)})
         headers = build_headers(self._auth.get_referer())
-        upload_files = [("upload[]", (f.name, f.read_bytes())) for f in files]
-        response = await self._get_client().post(
-            url,
-            files=upload_files,
-            headers=headers,
-        )
-        check_upload_response(response.text)
+        file_handles = [f.open("rb") for f in files]
+        try:
+            upload_files = [
+                ("upload[]", (f.name, fh)) for f, fh in zip(files, file_handles)
+            ]
+            response = await self._get_client().post(
+                url,
+                files=upload_files,
+                headers=headers,
+            )
+            check_upload_response(response.text)
+        finally:
+            for fh in file_handles:
+                fh.close()
 
     async def delete(self, dir: str, file: str) -> None:
         """Delete a file."""
