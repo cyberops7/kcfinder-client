@@ -135,6 +135,20 @@ One-way push sync on top of the client. Compares local vs remote files by
 name + size. Supports dry run. Available in both async (`SyncManager`) and
 sync (`SyncManagerSync`) variants.
 
+## Releasing
+
+Published to [PyPI](https://pypi.org/project/kcfinder-client/) via trusted
+publishing (OIDC). No API tokens — auth is configured in PyPI account settings.
+
+1. Bump `version` in `pyproject.toml`
+2. Commit and push to main
+3. Create a GitHub release with tag (e.g., `v0.2.0`)
+4. `.github/workflows/publish.yml` triggers automatically — re-runs all CI
+   checks, builds with `uv build`, publishes via `pypa/gh-action-pypi-publish`
+
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests
+on every push and PR to main.
+
 ## Design Principles
 
 - Dual sync/async clients sharing logic via `_core.py` (same pattern as
@@ -142,5 +156,4 @@ sync (`SyncManagerSync`) variants.
 - Auth classes take explicit args — no credential sourcing; consumers handle
   that
 - `harmonysite_auth_from_env()` factory for deployment contexts (n8n, CI)
-- Primary consumer is the `witnessmusic` project via local path dependency
-  (`uv` source)
+- Primary consumer is the `witnessmusic` project (`uv add kcfinder-client`)
