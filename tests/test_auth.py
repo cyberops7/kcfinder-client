@@ -122,7 +122,11 @@ def test_harmonysite_auth_login_failure_sync(httpx_mock):
 
 @pytest.mark.asyncio
 async def test_harmonysite_auth_success(httpx_mock):
-    httpx_mock.add_response(url="https://example.com/dbaction.php", status_code=200)
+    httpx_mock.add_response(
+        url="https://example.com/dbaction.php",
+        status_code=200,
+        headers=[("Set-Cookie", "PHPSESSID=abc123"), ("Set-Cookie", "fakelevel=4")],
+    )
     httpx_mock.add_response(status_code=200)  # Matches browse.php GET with query params
     auth = HarmonySiteAuth(
         login_url="https://example.com/dbaction.php",
@@ -137,7 +141,11 @@ async def test_harmonysite_auth_success(httpx_mock):
 
 
 def test_harmonysite_auth_success_sync(httpx_mock):
-    httpx_mock.add_response(url="https://example.com/dbaction.php", status_code=200)
+    httpx_mock.add_response(
+        url="https://example.com/dbaction.php",
+        status_code=200,
+        headers=[("Set-Cookie", "PHPSESSID=abc123"), ("Set-Cookie", "fakelevel=4")],
+    )
     httpx_mock.add_response(status_code=200)  # Matches browse.php GET with query params
     auth = HarmonySiteAuth(
         login_url="https://example.com/dbaction.php",
@@ -149,6 +157,45 @@ def test_harmonysite_auth_success_sync(httpx_mock):
     with httpx.Client() as client:
         auth.authenticate_sync(client)
     # If we get here without AuthError, auth succeeded
+
+
+@pytest.mark.asyncio
+async def test_harmonysite_auth_bad_credentials_200(httpx_mock):
+    """HarmonySite returns 200 on bad credentials but omits the fakelevel cookie."""
+    httpx_mock.add_response(
+        url="https://example.com/dbaction.php",
+        status_code=200,
+        headers=[("Set-Cookie", "PHPSESSID=abc123")],
+    )
+    auth = HarmonySiteAuth(
+        login_url="https://example.com/dbaction.php",
+        browse_url="https://example.com/kcfinder/browse.php",
+        username="user",
+        password="wrong",
+        bros_config=BROS_CONFIG,
+    )
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(AuthError, match="invalid credentials"):
+            await auth.authenticate(client)
+
+
+def test_harmonysite_auth_bad_credentials_200_sync(httpx_mock):
+    """HarmonySite returns 200 on bad credentials but omits the fakelevel cookie."""
+    httpx_mock.add_response(
+        url="https://example.com/dbaction.php",
+        status_code=200,
+        headers=[("Set-Cookie", "PHPSESSID=abc123")],
+    )
+    auth = HarmonySiteAuth(
+        login_url="https://example.com/dbaction.php",
+        browse_url="https://example.com/kcfinder/browse.php",
+        username="user",
+        password="wrong",
+        bros_config=BROS_CONFIG,
+    )
+    with httpx.Client() as client:
+        with pytest.raises(AuthError, match="invalid credentials"):
+            auth.authenticate_sync(client)
 
 
 def test_harmonysite_auth_from_env():

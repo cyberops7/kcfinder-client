@@ -88,6 +88,15 @@ class HarmonySiteAuth(BaseAuth):
             "remember": "1",
         }
 
+    def _login_succeeded(self, session_cookies: httpx.Cookies) -> bool:
+        """Check whether the HarmonySite login actually succeeded.
+
+        HarmonySite returns HTTP 200 even on bad credentials. A successful
+        login sets additional cookies (e.g. ``fakelevel``) beyond
+        ``PHPSESSID``; a failed login only sets ``PHPSESSID``.
+        """
+        return len(session_cookies) > 1
+
     async def authenticate(self, session: httpx.AsyncClient) -> None:
         login_resp = await session.post(
             self._login_url,
@@ -96,6 +105,8 @@ class HarmonySiteAuth(BaseAuth):
         )
         if login_resp.status_code != 200:
             raise AuthError(f"Login failed with status {login_resp.status_code}")
+        if not self._login_succeeded(session.cookies):
+            raise AuthError("Login failed: invalid credentials")
 
         init_resp = await session.get(self._init_url())
         if init_resp.status_code != 200:
@@ -111,6 +122,8 @@ class HarmonySiteAuth(BaseAuth):
         )
         if login_resp.status_code != 200:
             raise AuthError(f"Login failed with status {login_resp.status_code}")
+        if not self._login_succeeded(session.cookies):
+            raise AuthError("Login failed: invalid credentials")
 
         init_resp = session.get(self._init_url())
         if init_resp.status_code != 200:
