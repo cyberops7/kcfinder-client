@@ -113,6 +113,33 @@ async def main():
 asyncio.run(main())
 ```
 
+## Timeouts & Retries
+
+Both clients accept optional `timeout` and `retries` parameters:
+
+```python
+from kcfinder_client import KCFinderClient
+
+# Set a 30-second timeout
+with KCFinderClient(browse_url, auth, timeout=30.0) as client:
+    files = client.list_files()
+
+# Retry up to 3 times on connection errors and 5xx responses
+with KCFinderClient(browse_url, auth, retries=3) as client:
+    files = client.list_files()
+
+# Both together
+with KCFinderClient(browse_url, auth, timeout=30.0, retries=3) as client:
+    files = client.list_files()
+```
+
+- **`timeout`** — passed to the underlying `httpx` client. Accepts a `float`
+  (seconds) or an `httpx.Timeout` object for fine-grained control. Defaults
+  to the httpx default of 5 seconds.
+- **`retries`** — number of retry attempts for transient failures (connection
+  errors and HTTP 5xx responses). Uses exponential backoff between attempts.
+  Defaults to `0` (no retries). Uploads are never retried.
+
 ## Sync Files with SyncManager
 
 One-way push sync to make a remote directory match a local one:
