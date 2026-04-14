@@ -140,14 +140,33 @@ sync (`SyncManagerSync`) variants.
 Published to [PyPI](https://pypi.org/project/kcfinder-client/) via trusted
 publishing (OIDC). No API tokens — auth is configured in PyPI account settings.
 
-1. Bump `version` in `pyproject.toml`
-2. Commit and push to main
-3. Create a GitHub release with tag (e.g., `v0.2.0`)
-4. `.github/workflows/publish.yml` triggers automatically — re-runs all CI
+1. Create a `release-v<version>` branch from main
+2. Bump `version` in `pyproject.toml`
+3. Commit, push, and open a PR to main
+4. Merge the PR after CI passes
+5. Create a GitHub release with tag (e.g., `v0.2.1`) targeting main
+6. `.github/workflows/publish.yml` triggers automatically — re-runs all CI
    checks, builds with `uv build`, publishes via `pypa/gh-action-pypi-publish`
+7. Approve the deployment in GitHub Actions UI (required reviewer gate)
 
 CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests
 on every push and PR to main.
+
+### Branch Protection
+
+- **`main` branch**: Required status check (`check`, strict). Force pushes
+  and branch deletion blocked. Admin bypass is currently allowed.
+- **`pypi` environment**: Deployments restricted to `main` branch only.
+  Requires approval from `cyberops7` before publishing proceeds.
+- **Local pre-push hook**: Prevents direct pushes to main from this clone
+  (`.git/hooks/pre-push`). Not shared — each clone must set up its own.
+
+## Workflow
+
+- One PR per issue. Branch naming: `issue-<number>-<short-description>`
+  (e.g., `issue-10-stream-uploads`).
+- PRs reference the issue they close (e.g., `Closes #10` in the PR body).
+- All PRs target `main` and must pass the `check` CI status.
 
 ## Design Principles
 
