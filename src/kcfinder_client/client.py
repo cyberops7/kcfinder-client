@@ -1,5 +1,7 @@
 """Sync client for KCFinder file manager operations."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from types import TracebackType
 from urllib.parse import urlencode

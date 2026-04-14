@@ -156,8 +156,8 @@ on every push and PR to main.
 
 - **`main` branch**: Required status check (`check`, strict). Force pushes
   and branch deletion blocked. Admin bypass is currently allowed.
-- **`pypi` environment**: Deployments restricted to `main` branch only.
-  Requires approval from `cyberops7` before publishing proceeds.
+- **`pypi` environment**: Deployments restricted to `main` branch and `v*`
+  tags. Requires approval from `cyberops7` before publishing proceeds.
 - **Local pre-push hook**: Prevents direct pushes to main from this clone
   (`.git/hooks/pre-push`). Not shared — each clone must set up its own.
 
