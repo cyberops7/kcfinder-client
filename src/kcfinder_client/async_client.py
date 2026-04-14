@@ -20,6 +20,7 @@ from kcfinder_client._core import (
     prefix_dir,
     prefix_file_paths,
 )
+from kcfinder_client._retry import with_retry_async
 from kcfinder_client.auth import BaseAuth
 from kcfinder_client.models import DirTree, FileInfo
 
@@ -32,14 +33,20 @@ class AsyncKCFinderClient:
         browse_url: str,
         auth: BaseAuth,
         file_type: str = "images",
+        timeout: float | httpx.Timeout | None = None,
+        retries: int = 0,
     ) -> None:
         self._browse_url = browse_url
         self._auth = auth
         self._file_type = file_type
+        self._timeout = timeout
+        self._retries = retries
         self._client: httpx.AsyncClient | None = None
 
     async def __aenter__(self) -> AsyncKCFinderClient:
-        self._client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient(
+            timeout=self._timeout if self._timeout is not None else httpx.Timeout(5.0),
+        )
         await self._auth.authenticate(self._client)
         return self
 
@@ -60,6 +67,7 @@ class AsyncKCFinderClient:
             )
         return self._client
 
+    @with_retry_async
     async def _post(
         self, action: str, data: dict[str, str | list[str]]
     ) -> httpx.Response:
@@ -69,6 +77,12 @@ class AsyncKCFinderClient:
         )
         headers = build_headers(self._auth.get_referer())
         return await self._get_client().post(url, data=data, headers=headers)
+
+    @with_retry_async
+    async def _get(self, url: str) -> httpx.Response:
+        """Send a GET request to KCFinder."""
+        headers = build_headers(self._auth.get_referer())
+        return await self._get_client().get(url, headers=headers)
 
     async def list_files(self, dir: str = "") -> list[FileInfo]:
         """List files in a directory (root by default)."""
@@ -138,18 +152,22 @@ class AsyncKCFinderClient:
             "file": file,
         }
         url = f"{self._browse_url}?{urlencode(params)}"
-        headers = build_headers(self._auth.get_referer())
-        response = await self._get_client().get(url, headers=headers)
+        response = await self._get(url)
         return response.content
 
     async def get_tree(self) -> DirTree:
         """Initialize the browser view and return the root directory node."""
+        response = await self._post_no_data("init")
+        return parse_dir_tree(response.json())
+
+    @with_retry_async
+    async def _post_no_data(self, action: str) -> httpx.Response:
+        """Send a POST request without form data."""
         url = build_action_url(
-            self._browse_url, "init", self._file_type, self._auth.get_query_params()
+            self._browse_url, action, self._file_type, self._auth.get_query_params()
         )
         headers = build_headers(self._auth.get_referer())
-        response = await self._get_client().post(url, headers=headers)
-        return parse_dir_tree(response.json())
+        return await self._get_client().post(url, headers=headers)
 
     async def expand(self, dir: str = "") -> list[DirTree]:
         """Get subdirectory info for a directory (root by default)."""
