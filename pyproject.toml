@@ -1,6 +1,6 @@
 [project]
 name = "kcfinder-client"
-version = "0.2.1"
+version = "0.2.2"
 description = "Python client library for KCFinder file manager"
 readme = "README.md"
 license = "MIT"
