@@ -58,7 +58,9 @@ class AsyncKCFinderClient:
             )
         return self._client
 
-    async def _post(self, action: str, data: dict) -> httpx.Response:
+    async def _post(
+        self, action: str, data: dict[str, str | list[str]]
+    ) -> httpx.Response:
         """Send a POST request to KCFinder."""
         url = build_action_url(
             self._browse_url, action, self._file_type, self._auth.get_query_params()
