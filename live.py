@@ -7,6 +7,7 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
+import httpx
 from dotenv import load_dotenv
 from invoke import task
 
@@ -83,10 +84,33 @@ def _ensure_dir(client: KCFinderClient, name: str) -> None:
 
 @task
 def auth(c):
-    """Authenticate and confirm the session is valid."""
+    """Authenticate with valid credentials, then verify bad credentials fail."""
+    from kcfinder_client.auth import HarmonySiteAuth
+    from kcfinder_client.exceptions import AuthError
+
+    # Step 1: valid credentials should succeed
     with _get_client() as client:
         tree = client.get_tree()
-        print(f"Authenticated. Root: {tree.name}")
+        print(f"Valid login succeeded. Root: {tree.name}")
+
+    # Step 2: bad credentials should raise AuthError
+    _check_env()
+    bad_auth = HarmonySiteAuth(
+        login_url=os.environ["KCFINDER_LOGIN_URL"],
+        browse_url=os.environ["KCFINDER_BROWSE_URL"],
+        username=os.environ["KCFINDER_USERNAME"],
+        password="definitely-wrong-password-12345",
+        bros_config=os.environ["KCFINDER_BROS_CONFIG"],
+        brosseccheck=os.environ.get("KCFINDER_BROSSECCHECK", "Xx-ok-xX"),
+    )
+    browse_url = os.environ["KCFINDER_BROWSE_URL"]
+    try:
+        with KCFinderClient(browse_url, bad_auth) as client:
+            client.get_tree()
+        print("ERROR: Bad credentials were accepted!")
+        sys.exit(1)
+    except AuthError as e:
+        print(f"Bad login rejected: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -425,6 +449,53 @@ def cleanup(c):
 
         if not found:
             print("No test artifacts found.")
+
+
+@task(name="diagnose-login")
+def diagnose_login(c):
+    """Probe login responses to identify the failure signature.
+
+    Sends one request with valid credentials and one with a bad password,
+    then prints the response details for comparison. Used to determine
+    how to detect login failure in HarmonySiteAuth.
+    """
+    _check_env()
+    login_url = os.environ["KCFINDER_LOGIN_URL"]
+
+    def _probe(label, password):
+        data = {
+            "dbase": "users",
+            "action": "login",
+            "username": os.environ["KCFINDER_USERNAME"],
+            "password": password,
+            "nextpage": login_url.rsplit("/", 1)[0],
+            "login": "Log In",
+            "remember": "1",
+        }
+        with httpx.Client() as client:
+            r = client.post(login_url, data=data, follow_redirects=True)
+            print(f"\n{'=' * 60}")
+            print(f"  {label}")
+            print(f"{'=' * 60}")
+            print(f"status:      {r.status_code}")
+            print(f"final url:   {r.url}")
+            history = [(h.status_code, h.headers.get("location")) for h in r.history]
+            print(f"history:     {history}")
+            print(f"resp cookies: {list(r.cookies.keys())}")
+            print(f"jar cookies:  {dict(client.cookies)}")
+            print(f"body len:    {len(r.text)}")
+            # Look for login-related indicators in the body
+            body_lower = r.text.lower()
+            print(f"has 'log in' form: {'name="login"' in body_lower}")
+            print(f"has 'password' field: {'name="password"' in body_lower}")
+            print(f"has 'logged in': {'logged in' in body_lower}")
+            print(f"has 'invalid': {'invalid' in body_lower}")
+            print(f"has 'incorrect': {'incorrect' in body_lower}")
+            print(f"has 'error': {'error' in body_lower}")
+            print(f"has 'welcome': {'welcome' in body_lower}")
+
+    _probe("VALID LOGIN", os.environ["KCFINDER_PASSWORD"])
+    _probe("INVALID LOGIN", "definitely-wrong-password-12345")
 
 
 @task(name="all")
