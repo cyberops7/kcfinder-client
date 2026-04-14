@@ -127,7 +127,7 @@ def check_upload_response(response_text: str) -> None:
         raise classify_error(action="upload", message=line)
 
 
-def check_action_error(action: str, response_body: str | dict) -> None:
+def check_action_error(action: str, response_body: object) -> None:
     """Check a KCFinder response body for errors and raise if found.
 
     KCFinder returns HTTP 200 even on errors.  Successful mutating actions
@@ -142,21 +142,30 @@ def check_action_error(action: str, response_body: str | dict) -> None:
             msg = "; ".join(err) if isinstance(err, list) else str(err)
             raise classify_error(action=action, message=msg)
         return  # empty dict or success dict without "error" key
-    if isinstance(response_body, str):
-        stripped = response_body.strip()
-        if stripped == "" or stripped == "{}":
-            return
-        # Try to parse as JSON — some actions return JSON error strings
-        try:
-            parsed = json.loads(stripped)
-            if isinstance(parsed, dict) and "error" in parsed:
+    if not isinstance(response_body, str):
+        raise classify_error(
+            action=action,
+            message=f"unexpected response type: {type(response_body).__name__}",
+        )
+    stripped = response_body.strip()
+    if stripped == "" or stripped == "{}":
+        return
+    # Try to parse as JSON — some actions return JSON error strings
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, dict):
+            if "error" in parsed:
                 err = parsed["error"]
                 msg = "; ".join(err) if isinstance(err, list) else str(err)
                 raise classify_error(action=action, message=msg)
-            return  # valid JSON without "error" key
-        except json.JSONDecodeError:
-            pass
-        raise classify_error(action=action, message=stripped)
+            return  # valid JSON dict without "error" key
+        raise classify_error(
+            action=action,
+            message=f"unexpected response type: {type(parsed).__name__}",
+        )
+    except json.JSONDecodeError:
+        pass
+    raise classify_error(action=action, message=stripped)
 
 
 def parse_expand_response(raw: dict) -> list[DirTree]:
