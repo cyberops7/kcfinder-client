@@ -9,6 +9,7 @@ dist/
 *.tar.gz
 .pytest_cache/
 .coverage
+.claude/
 .idea
 htmlcov/
 docs/superpowers/
