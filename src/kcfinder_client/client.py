@@ -79,13 +79,22 @@ class KCFinderClient:
         )
         url += "&" + urlencode({"dir": prefix_dir(self._file_type, dir)})
         headers = build_headers(self._auth.get_referer())
-        upload_files = [("upload[]", (f.name, f.read_bytes())) for f in files]
-        response = self._get_client().post(
-            url,
-            files=upload_files,
-            headers=headers,
-        )
-        check_upload_response(response.text)
+        file_handles = []
+        try:
+            for f in files:
+                file_handles.append(f.open("rb"))
+            upload_files = [
+                ("upload[]", (f.name, fh)) for f, fh in zip(files, file_handles)
+            ]
+            response = self._get_client().post(
+                url,
+                files=upload_files,
+                headers=headers,
+            )
+            check_upload_response(response.text)
+        finally:
+            for fh in file_handles:
+                fh.close()
 
     def delete(self, dir: str, file: str) -> None:
         """Delete a file."""
