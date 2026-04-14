@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  check:
+  validate:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -36,3 +36,11 @@ jobs:
 
       - name: Test
         run: uv run --python ${{ matrix.python-version }} pytest -v
+
+  check:
+    if: always()
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: All matrix legs passed
+        run: test "${{ needs.validate.result }}" = "success"
