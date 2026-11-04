@@ -65,7 +65,7 @@ async def test_list_files_empty_dir(session_auth, httpx_mock):
 async def test_upload_single_file(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir",
-        text="",
+        text="/photo.jpg",
     )
     test_file = tmp_path / "photo.jpg"
     test_file.write_bytes(b"fake image data")
@@ -77,7 +77,7 @@ async def test_upload_single_file(session_auth, httpx_mock, tmp_path):
 async def test_upload_multiple_files(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir",
-        text="",
+        text="/a.jpg\n/b.jpg",
     )
     file_a = tmp_path / "a.jpg"
     file_b = tmp_path / "b.jpg"
@@ -91,7 +91,7 @@ async def test_upload_multiple_files(session_auth, httpx_mock, tmp_path):
 async def test_upload_root_dir(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
         url=f"{BROWSE_URL}?act=upload&type=images&dir=images",
-        text="",
+        text="/photo.jpg",
     )
     test_file = tmp_path / "photo.jpg"
     test_file.write_bytes(b"fake image data")

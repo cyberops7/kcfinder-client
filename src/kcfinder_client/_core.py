@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
-from kcfinder_client.exceptions import classify_error
+from kcfinder_client.exceptions import UploadError, classify_error
 from kcfinder_client.models import DirTree, FileInfo
 
 
@@ -78,6 +78,7 @@ def build_form_data(
 
 def parse_file_list(raw: dict) -> list[FileInfo]:
     """Parse a file list from a KCFinder response into FileInfo objects."""
+    check_action_error("chDir", raw)
     writable = raw.get("dirWritable", False)
     return [
         FileInfo(
@@ -96,6 +97,7 @@ def parse_dir_tree(raw: dict) -> DirTree:
     The init response wraps the tree in a "tree" key at the top level.
     Files are siblings of "tree", not nested under it.
     """
+    check_action_error("init", raw)
     tree = raw.get("tree", raw)
     files = parse_file_list(raw) if "files" in raw else []
     return _parse_tree_node(tree, files)
@@ -118,8 +120,14 @@ def check_upload_response(response_text: str) -> None:
     Upload responses differ from other actions: success returns the
     uploaded filename prefixed with "/" (e.g., "/photo.jpg"). Errors
     return "filename: error message". Multiple files produce one line
-    per file.
+    per file. An empty body means nothing was uploaded, which is what a
+    refused session returns.
     """
+    if not response_text.strip():
+        raise UploadError(
+            action="upload",
+            message="empty response; the server may have refused the session",
+        )
     for line in response_text.strip().splitlines():
         line = line.strip()
         if not line or line.startswith("/"):
@@ -174,6 +182,7 @@ def parse_expand_response(raw: dict) -> list[DirTree]:
     The expand action returns ``{"dirs": [{name, writable, hasDirs, ...}]}``.
     Each entry describes a direct subdirectory (no nested children).
     """
+    check_action_error("expand", raw)
     return [
         DirTree(
             name=d["name"],

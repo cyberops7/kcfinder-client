@@ -7,13 +7,14 @@ from kcfinder_client._core import (
     build_form_data,
     build_headers,
     check_action_error,
+    check_upload_response,
     parse_dir_tree,
     parse_expand_response,
     parse_file_list,
     prefix_dir,
     prefix_file_paths,
 )
-from kcfinder_client.exceptions import ActionError
+from kcfinder_client.exceptions import ActionError, PermissionDeniedError, UploadError
 from kcfinder_client.models import DirTree
 
 
@@ -248,3 +249,38 @@ def test_parse_expand_response():
 
 def test_parse_expand_response_empty():
     assert parse_expand_response({"dirs": []}) == []
+
+
+# --- Refused sessions must raise, not look like empty results ---
+
+DENIED = {"error": "You don't have permissions to browse server."}
+
+
+def test_check_upload_response_success_lines():
+    check_upload_response("/a.jpg\n/b.jpg\n")
+
+
+def test_check_upload_response_empty_raises():
+    """A refused session gets an empty upload body, which is not a success."""
+    with pytest.raises(UploadError, match="empty"):
+        check_upload_response("")
+
+
+def test_check_upload_response_whitespace_raises():
+    with pytest.raises(UploadError, match="empty"):
+        check_upload_response("  \n ")
+
+
+def test_parse_file_list_error_raises():
+    with pytest.raises(PermissionDeniedError, match="permissions"):
+        parse_file_list(DENIED)
+
+
+def test_parse_dir_tree_error_raises():
+    with pytest.raises(PermissionDeniedError, match="permissions"):
+        parse_dir_tree(DENIED)
+
+
+def test_parse_expand_response_error_raises():
+    with pytest.raises(PermissionDeniedError, match="permissions"):
+        parse_expand_response(DENIED)

@@ -21,7 +21,6 @@ REQUIRED_ENV_VARS = [
     "KCFINDER_BROWSE_URL",
     "KCFINDER_USERNAME",
     "KCFINDER_PASSWORD",
-    "KCFINDER_BROS_CONFIG",
 ]
 
 # Minimal valid 1x1 white JPEG
@@ -100,7 +99,7 @@ def auth(c):
         browse_url=os.environ["KCFINDER_BROWSE_URL"],
         username=os.environ["KCFINDER_USERNAME"],
         password="definitely-wrong-password-12345",
-        bros_config=os.environ["KCFINDER_BROS_CONFIG"],
+        bros_config=os.environ.get("KCFINDER_BROS_CONFIG") or None,
         brosseccheck=os.environ.get("KCFINDER_BROSSECCHECK", "Xx-ok-xX"),
     )
     browse_url = os.environ["KCFINDER_BROWSE_URL"]

@@ -18,64 +18,61 @@ the client.
 
 ### HarmonySiteAuth
 
-For HarmonySite's KCFinder fork. Authenticates in two steps:
+For HarmonySite's KCFinder fork. Authenticates in three steps:
 
 1. POST to the HarmonySite login URL to establish a web session
-2. GET the KCFinder browse URL with `bros_config` and `brosseccheck` query
-   params to initialize the KCFinder session
+2. GET a HarmonySite admin page (by default the new-page form,
+   `dbpage.php?pg=form&dbase=pages`) and read the signed `bros_config` and
+   `bros_sig` from the KCFinder links that HarmonySite embeds in it
+3. GET the KCFinder browse URL with those params to initialize the KCFinder
+   session, and raise `AuthError` if KCFinder refuses it
 
-The `bros_config` and `brosseccheck` params are also sent as query parameters
-on every subsequent KCFinder request (the HarmonySite fork requires them to
-authorize each action, not just the session init).
+The signed params are also sent as query parameters on every subsequent
+KCFinder request.
 
 ```python
 from kcfinder_client import HarmonySiteAuth
 
 auth = HarmonySiteAuth(
     login_url="https://example.harmonysong.com/dbaction.php",
-    browse_url="https://example.harmonysong.com/kcfinder/browse.php",
+    browse_url="https://example.harmonysong.com/brostools/jquery/kcfinder/browse.php",
     username="admin",
     password="secret",
-    bros_config=(
-        'a:3:{s:9:"uploadDir";s:6:"files/";'
-        's:9:"thumbsDir";s:14:"files/.thumbs/";'
-        's:9:"uploadURL";s:0:"";}'
-    ),
-    brosseccheck="Xx-ok-xX",  # optional, default is "Xx-ok-xX"
 )
 ```
 
 #### Constructor Parameters
 
-| Parameter      | Type  | Required | Description                                    |
-|----------------|-------|----------|------------------------------------------------|
-| `login_url`    | `str` | Yes      | The HarmonySite `dbaction.php` login endpoint  |
-| `browse_url`   | `str` | Yes      | The KCFinder `browse.php` URL                  |
-| `username`     | `str` | Yes      | HarmonySite login username                     |
-| `password`     | `str` | Yes      | HarmonySite login password                     |
-| `bros_config`  | `str` | Yes      | PHP-serialized KCFinder config (see below)     |
-| `brosseccheck` | `str` | No       | Security token; default is `"Xx-ok-xX"`        |
+| Parameter         | Type          | Required | Description                                                 |
+|-------------------|---------------|----------|-------------------------------------------------------------|
+| `login_url`       | `str`         | Yes      | The HarmonySite `dbaction.php` login endpoint               |
+| `browse_url`      | `str`         | Yes      | The KCFinder `browse.php` URL                               |
+| `username`        | `str`         | Yes      | HarmonySite login username                                  |
+| `password`        | `str`         | Yes      | HarmonySite login password                                  |
+| `config_page_url` | `str \| None` | No       | Page to read the signed params from (default: see above)    |
+| `bros_config`     | `str \| None` | No       | Legacy PHP-serialized config, used only as a fallback       |
+| `brosseccheck`    | `str`         | No       | Legacy security token; default is `"Xx-ok-xX"`              |
+
+#### Signed params expire
+
+HarmonySite's signed `bros_config` is base64-encoded JSON carrying an `exp`
+timestamp, and `bros_sig` is an HMAC over it. They expire about an hour after
+they are issued. `auth.expires_at` returns the expiry as a UTC `datetime`
+after authentication (or `None` when the legacy params are in use). Open a new
+client, which authenticates again, for each job rather than holding one open
+for hours.
 
 <details>
-<summary><strong>bros_config reference</strong></summary>
+<summary><strong>Legacy bros_config fallback</strong></summary>
 
-The `bros_config` is a PHP-serialized string that HarmonySite's KCFinder fork
-uses to configure the file manager session. It must contain at minimum:
+Before November 2026, HarmonySite accepted a fixed PHP-serialized
+`bros_config` plus `brosseccheck=Xx-ok-xX`. HarmonySite now refuses those.
+They are still accepted as constructor arguments, and used only when the
+config page embeds no signed KCFinder URL:
 
 ```
 a:3:{s:9:"uploadDir";s:6:"files/";s:9:"thumbsDir";s:14:"files/.thumbs/";s:9:"uploadURL";s:0:"";}
 ```
-
-| Key          | Description                                        |
-|--------------|----------------------------------------------------|
-| `uploadDir`  | Server-relative path to the root upload directory  |
-| `thumbsDir`  | Server-relative path to the thumbnails directory   |
-| `uploadURL`  | Public URL prefix for uploaded files               |
-
-> [!IMPORTANT]
-> The value must be a valid PHP-serialized string with double quotes
-> around string values (e.g., `s:9:"uploadDir"`). Stripping or
-> escaping the quotes will cause silent auth failures.
 
 </details>
 
@@ -123,13 +120,14 @@ auth = harmonysite_auth_from_env()
 | `KCFINDER_BROWSE_URL`   | The KCFinder `browse.php` URL                        |
 | `KCFINDER_USERNAME`     | Login username                                       |
 | `KCFINDER_PASSWORD`     | Login password                                       |
-| `KCFINDER_BROS_CONFIG`  | PHP-serialized `bros_config` string (with quotes)    |
 
 ### Optional Variables
 
-| Variable                  | Default        | Description            |
-|---------------------------|----------------|------------------------|
-| `KCFINDER_BROSSECCHECK`   | `"Xx-ok-xX"`  | Security check token   |
+| Variable                   | Default                                | Description                          |
+|----------------------------|----------------------------------------|--------------------------------------|
+| `KCFINDER_CONFIG_PAGE_URL` | `<site>/dbpage.php?pg=form&dbase=pages` | Page to read the signed params from |
+| `KCFINDER_BROS_CONFIG`     | none                                   | Legacy fallback `bros_config`        |
+| `KCFINDER_BROSSECCHECK`    | `"Xx-ok-xX"`                           | Legacy fallback security token       |
 
 <details>
 <summary><strong>Example .env file</strong></summary>
@@ -139,7 +137,6 @@ KCFINDER_LOGIN_URL=https://example.harmonysong.com/dbaction.php
 KCFINDER_BROWSE_URL=https://example.harmonysong.com/kcfinder/browse.php
 KCFINDER_USERNAME=admin
 KCFINDER_PASSWORD=secret
-KCFINDER_BROS_CONFIG=a:3:{s:9:"uploadDir";s:6:"files/";s:9:"thumbsDir";s:14:"files/.thumbs/";s:9:"uploadURL";s:0:"";}
 ```
 
 </details>

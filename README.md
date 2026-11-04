@@ -45,11 +45,6 @@ auth = HarmonySiteAuth(
     browse_url="https://example.harmonysong.com/kcfinder/browse.php",
     username="admin",
     password="secret",
-    bros_config=(
-        'a:3:{s:9:"uploadDir";s:6:"files/";'
-        's:9:"thumbsDir";s:14:"files/.thumbs/";'
-        's:9:"uploadURL";s:0:"";}'
-    ),
 )
 
 async def main():
@@ -72,11 +67,6 @@ auth = HarmonySiteAuth(
     browse_url="https://example.harmonysong.com/kcfinder/browse.php",
     username="admin",
     password="secret",
-    bros_config=(
-        'a:3:{s:9:"uploadDir";s:6:"files/";'
-        's:9:"thumbsDir";s:14:"files/.thumbs/";'
-        's:9:"uploadURL";s:0:"";}'
-    ),
 )
 
 browse_url = "https://example.harmonysong.com/kcfinder/browse.php"
@@ -95,7 +85,6 @@ export KCFINDER_LOGIN_URL=https://example.harmonysong.com/dbaction.php
 export KCFINDER_BROWSE_URL=https://example.harmonysong.com/kcfinder/browse.php
 export KCFINDER_USERNAME=admin
 export KCFINDER_PASSWORD=secret
-export KCFINDER_BROS_CONFIG='a:3:{s:9:"uploadDir";s:6:"files/";s:9:"thumbsDir";s:14:"files/.thumbs/";s:9:"uploadURL";s:0:"";}'
 ```
 
 ```python
