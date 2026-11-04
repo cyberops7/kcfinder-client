@@ -101,9 +101,16 @@ All operations POST to `browse.php?act=<action>` with form data (`dir`,
 - **Session-based auth**: `PHPSESSID` cookie from login step
 - **Required headers**: `Referer` (full browse URL) and
   `X-Requested-With: XMLHttpRequest`
-- **Auth query params**: HarmonySite's fork requires `bros_config` and
-  `brosseccheck` as query params on every request, not just the session init.
-  This is handled by `BaseAuth.get_query_params()`.
+- **Auth query params**: HarmonySite's fork requires a signed `bros_config`
+  (base64 JSON with an `exp` about an hour out) and `bros_sig` (an HMAC). They
+  are read after login from the KCFinder links HarmonySite embeds in
+  `dbpage.php?pg=form&dbase=pages`, and sent on every request via
+  `BaseAuth.get_query_params()`. The pre-2026-11 fixed `bros_config` plus
+  `brosseccheck=Xx-ok-xX` is now refused, and kept only as a fallback.
+- **Refusals look like success**: a refused session gets HTTP 200 with
+  `{"error": "You don't have permissions to browse server."}` for actions, an
+  empty body for uploads, and an HTML `alert(...)` page for the init GET (with
+  the apostrophe JS-escaped as `don\'t`). All three must raise.
 - **Dir param type prefix**: All `dir` params must include the file type
   prefix (e.g., `images/subfolder`). The client handles this internally via
   `prefix_dir()` — callers pass bare paths like `"subfolder"`.
@@ -121,9 +128,10 @@ Auth is pluggable via `BaseAuth` subclasses. Each strategy implements
 `authenticate(session)`, `authenticate_sync(session)`, `get_referer()`, and
 optionally `get_query_params()`.
 
-- **`HarmonySiteAuth`**: Logs in via `dbaction.php`, then initializes KCFinder
-  session with `bros_config`/`brosseccheck` query params. These params are
-  also sent on every subsequent request via `get_query_params()`.
+- **`HarmonySiteAuth`**: Logs in via `dbaction.php`, reads the signed
+  `bros_config`/`bros_sig` from a HarmonySite admin page, then initializes
+  the KCFinder session with them. These params are also sent on every
+  subsequent request via `get_query_params()`.
 - **`SessionAuth`**: For standard KCFinder installs where the session is
   pre-established
 - **`harmonysite_auth_from_env()`**: Factory that reads credentials from
