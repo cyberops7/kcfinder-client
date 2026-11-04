@@ -7,6 +7,7 @@ import pytest
 
 from kcfinder_client.async_client import AsyncKCFinderClient
 from kcfinder_client.client import KCFinderClient
+from kcfinder_client.exceptions import UploadError
 from tests.conftest import BROWSE_URL
 
 # --- Sync client tests ---
@@ -125,10 +126,10 @@ def test_upload_not_retried(session_auth, httpx_mock, tmp_path):
     test_file.write_bytes(b"fake image data")
     with KCFinderClient(BROWSE_URL, session_auth, retries=2) as client:
         # Upload bypasses _post, so the 503 is returned directly
-        # without triggering a retry. The response text will be
-        # checked by check_upload_response which won't error on
-        # non-error text, but the key point is only 1 request was made.
-        client.upload("test_dir", test_file)
+        # without triggering a retry. Its empty body is reported as a
+        # failed upload; the key point is that only 1 request was made.
+        with pytest.raises(UploadError):
+            client.upload("test_dir", test_file)
     assert len(httpx_mock.get_requests()) == 1
 
 
@@ -225,5 +226,6 @@ async def test_async_upload_not_retried(session_auth, httpx_mock, tmp_path):
     test_file = tmp_path / "photo.jpg"
     test_file.write_bytes(b"fake image data")
     async with AsyncKCFinderClient(BROWSE_URL, session_auth, retries=2) as client:
-        await client.upload("test_dir", test_file)
+        with pytest.raises(UploadError):
+            await client.upload("test_dir", test_file)
     assert len(httpx_mock.get_requests()) == 1

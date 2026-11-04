@@ -41,7 +41,7 @@ def test_list_files(session_auth, httpx_mock):
 
 def test_upload(session_auth, httpx_mock, tmp_path):
     httpx_mock.add_response(
-        url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir", text=""
+        url=f"{BROWSE_URL}?act=upload&type=images&dir=images%2Ftest_dir", text="/photo.jpg"
     )
     test_file = tmp_path / "photo.jpg"
     test_file.write_bytes(b"fake image data")
